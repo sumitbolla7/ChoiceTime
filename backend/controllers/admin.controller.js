@@ -223,6 +223,7 @@ export const createProduct = async (req, res) => {
       isNewArrival: Boolean(productData.isNewArrival),
       onSale: Boolean(productData.onSale),
       isFeatured: Boolean(productData.isFeatured),
+      isActive: productData.isActive !== undefined ? Boolean(productData.isActive) : true,
       inStock: stockNum > 0,
       rating: Number(productData.rating ?? 0),
       ratingsCount: Number(productData.ratingsCount ?? 0),
@@ -290,6 +291,7 @@ export const updateProduct = async (req, res) => {
       ...(productData.isNewArrival !== undefined && { isNewArrival: Boolean(productData.isNewArrival) }),
       ...(productData.onSale !== undefined && { onSale: Boolean(productData.onSale) }),
       ...(productData.isFeatured !== undefined && { isFeatured: Boolean(productData.isFeatured) }),
+      ...(productData.isActive !== undefined && { isActive: Boolean(productData.isActive) }),
       ...(productData.stock !== undefined && { inStock: stockNum > 0 }),
       ...(productData.colorOptions !== undefined && { colorOptions: productData.colorOptions }),
       ...(productData.boxOptions !== undefined && { boxOptions: productData.boxOptions }),
@@ -849,5 +851,3 @@ export const updateShippingConfig = async (req, res) => {
     res.status(500).json({ success: false, message: err?.message });
   }
 };
-
-
