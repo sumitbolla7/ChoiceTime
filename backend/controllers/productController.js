@@ -23,6 +23,8 @@ export const getProducts = async (req, res) => {
 
     if (subCategory) query.subCategory = new RegExp(`^${String(subCategory).trim()}$`, 'i');
     if (gender) query.gender = String(gender).toLowerCase().trim();
+    // Hide products the admin has turned off, without deleting them
+    query.isActive = { $ne: false };
     if (isNewArrival === 'true') query.isNewArrival = true;
     if (onSale === 'true') query.onSale = true;
     if (search && String(search).trim()) {
@@ -74,7 +76,7 @@ export const getProducts = async (req, res) => {
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).lean();
-    if (!product) {
+    if (!product || product.isActive === false) {
       return res.status(404).json({
         success: false,
         message: 'Product not found',
