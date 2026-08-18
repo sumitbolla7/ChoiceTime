@@ -28,6 +28,8 @@ const productSchema = new mongoose.Schema(
     onSale: { type: Boolean, default: false },
     isFeatured: { type: Boolean, default: false },
     inStock: { type: Boolean, default: true },
+    // When false, product is hidden from the live website (browse/search/detail) but stays in admin — use to pause a product without deleting it.
+    isActive: { type: Boolean, default: true },
 
     color: String,
     colorOptions: [{ type: String }],
