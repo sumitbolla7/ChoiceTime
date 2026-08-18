@@ -1748,6 +1748,7 @@ const AdminDashboard = () => {
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
                           <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Sale</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Live on Site</th>
                           <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
@@ -1813,6 +1814,25 @@ const AdminDashboard = () => {
                                     className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${product.onSale ? 'bg-red-500' : 'bg-gray-300'}`}
                                   >
                                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${product.onSale ? 'translate-x-5' : 'translate-x-0'}`}></span>
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center justify-center">
+                                  <button
+                                    title={product.isActive === false ? 'Hidden from website — click to show' : 'Live on website — click to hide'}
+                                    onClick={async () => {
+                                      const nextActive = !(product.isActive !== false);
+                                      try {
+                                        await adminAPI.updateProduct(product._id, { isActive: nextActive });
+                                        setProducts(prev => prev.map(p => p._id === product._id ? { ...p, isActive: nextActive } : p));
+                                      } catch (err) {
+                                        console.error('Toggle active error:', err);
+                                      }
+                                    }}
+                                    className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${product.isActive !== false ? 'bg-green-500' : 'bg-gray-300'}`}
+                                  >
+                                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${product.isActive !== false ? 'translate-x-5' : 'translate-x-0'}`}></span>
                                   </button>
                                 </div>
                               </td>
