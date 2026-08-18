@@ -196,7 +196,9 @@ async function buildSectionsForCategories(categories, salesMap, limit) {
 }
 
 async function buildSection({ label, slug, viewAllPath, productQuery, salesMap, limit }) {
-  const docs = await Product.find(productQuery).select('_id').lean();
+  // Hide products the admin has turned off, without deleting them
+  const activeQuery = { ...productQuery, isActive: { $ne: false } };
+  const docs = await Product.find(activeQuery).select('_id').lean();
   if (docs.length === 0) return null;
 
   const idStrs = docs.map((d) => String(d._id));
@@ -205,7 +207,7 @@ async function buildSection({ label, slug, viewAllPath, productQuery, salesMap, 
   const oids = pickedIds
     .filter((id) => mongoose.isValidObjectId(id))
     .map((id) => new mongoose.Types.ObjectId(id));
-  const full = await Product.find({ _id: { $in: oids } }).lean();
+  const full = await Product.find({ _id: { $in: oids }, isActive: { $ne: false } }).lean();
   const byId = new Map(full.map((p) => [String(p._id), p]));
   const products = pickedIds.map((id) => byId.get(id)).filter(Boolean);
 
