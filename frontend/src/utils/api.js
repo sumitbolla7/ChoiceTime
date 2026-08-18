@@ -235,12 +235,24 @@ export const orderAPI = {
 export const paymentAPI = {
   getCodAdvanceConfig: async () => apiRequest('/payment/cod-advance'),
 
-  /** Full prepay: pass shippingAddress object. COD advance: { purpose: 'cod_advance', shippingAddress }. */
+  /**
+   * Full prepay: pass { shippingAddress, couponCode }.
+   * COD advance: pass { purpose: 'cod_advance', shippingAddress }.
+   * (Also still accepts a raw shippingAddress object for backward compatibility.)
+   */
   createRazorpayOrder: async (payload) => {
-    const body =
-      payload && typeof payload === 'object' && payload.purpose === 'cod_advance'
-        ? { purpose: 'cod_advance', shippingAddress: payload.shippingAddress }
-        : { shippingAddress: payload };
+    const isCodAdvance = payload && typeof payload === 'object' && payload.purpose === 'cod_advance';
+
+    let body;
+    if (isCodAdvance) {
+      body = { purpose: 'cod_advance', shippingAddress: payload.shippingAddress };
+    } else if (payload && typeof payload === 'object' && 'shippingAddress' in payload) {
+      body = { shippingAddress: payload.shippingAddress, couponCode: payload.couponCode || '' };
+    } else {
+      // Backward-compatible fallback: a raw address object was passed directly
+      body = { shippingAddress: payload };
+    }
+
     return apiRequest('/payment/create-order', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -578,4 +590,3 @@ export const trackingAPI = {
 };
 
 export default apiRequest;
-
