@@ -3,6 +3,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
+import Coupon from '../models/Coupon.js';
 import Setting from '../models/Setting.js';
 import { protect } from '../middleware/authMiddleware.js';
 import dotenv from 'dotenv';
@@ -29,6 +30,32 @@ const getShippingConfig = async () => {
   } catch {
     return DEFAULT_SHIPPING_CONFIG;
   }
+};
+
+// Server-side coupon validation (never trust client-sent discount amounts)
+const validateCouponForOrder = async (code, cartTotal, userId) => {
+  if (!code) return { discount: 0, coupon: null };
+
+  const coupon = await Coupon.findOne({ code: code.toUpperCase().trim() });
+  if (!coupon || !coupon.isActive) return { discount: 0, coupon: null };
+  if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) return { discount: 0, coupon: null };
+  if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) return { discount: 0, coupon: null };
+
+  const userUsageCount = coupon.usedBy.filter((u) => u.user.toString() === userId.toString()).length;
+  if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) return { discount: 0, coupon: null };
+
+  if (cartTotal < coupon.minOrderAmount) return { discount: 0, coupon: null };
+
+  let discount = 0;
+  if (coupon.discountType === 'percentage') {
+    discount = (cartTotal * coupon.discountValue) / 100;
+    if (coupon.maxDiscount && discount > coupon.maxDiscount) discount = coupon.maxDiscount;
+  } else {
+    discount = coupon.discountValue;
+  }
+  if (discount > cartTotal) discount = cartTotal;
+
+  return { discount: Math.round(discount), coupon };
 };
 
 // Test route to verify payment routes are working
@@ -72,7 +99,7 @@ router.post('/create-order', protect, async (req, res) => {
       });
     }
 
-    const { shippingAddress, purpose } = req.body;
+    const { shippingAddress, purpose, couponCode } = req.body;
 
     const cart = await Cart.findOne({ user: req.user._id });
 
@@ -112,9 +139,14 @@ router.post('/create-order', protect, async (req, res) => {
       const boxPrice = Number(item.boxPrice) || 0;
       return total + (itemPrice + boxPrice) * item.quantity;
     }, 0);
+
+    // Re-validate coupon on the server — never trust a discount amount sent from the browser
+    const { discount, coupon: appliedCouponDoc } = await validateCouponForOrder(couponCode, subtotal, req.user._id);
+    const discountedSubtotal = Math.max(0, subtotal - discount);
+
     const { freeShippingThreshold, shippingCharge } = await getShippingConfig();
-    const shippingAmount = subtotal > freeShippingThreshold ? 0 : shippingCharge;
-    const totalAmount = subtotal + shippingAmount;
+    const shippingAmount = discountedSubtotal > freeShippingThreshold ? 0 : shippingCharge;
+    const totalAmount = discountedSubtotal + shippingAmount;
 
     const amountInPaise = Math.round(totalAmount * 100); // Convert to paise
 
@@ -143,6 +175,7 @@ router.post('/create-order', protect, async (req, res) => {
         };
       }),
       totalAmount,
+      coupon: appliedCouponDoc ? { code: appliedCouponDoc.code, discount } : { code: '', discount: 0 },
       shippingAddress: shippingAddress || req.user.address || {},
       paymentMethod: 'razorpay',
       status: 'pending',
@@ -231,6 +264,21 @@ router.post('/verify-payment', protect, async (req, res) => {
     order.paymentStatus = 'paid';
     await order.save();
 
+    // Mark coupon as used (so usage limits / per-user limits actually work)
+    if (order.coupon?.code) {
+      try {
+        await Coupon.updateOne(
+          { code: order.coupon.code },
+          {
+            $inc: { usedCount: 1 },
+            $push: { usedBy: { user: req.user._id, usedAt: new Date() } },
+          }
+        );
+      } catch (couponErr) {
+        console.error('Coupon usage update failed:', couponErr?.message || couponErr);
+      }
+    }
+
     try {
       const parcelGuruPayload = buildParcelGuruOrderPayload(order, {
         customerEmail: req.user?.email || '',
@@ -268,4 +316,3 @@ router.post('/verify-payment', protect, async (req, res) => {
 });
 
 export default router;
-
