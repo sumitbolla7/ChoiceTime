@@ -423,8 +423,11 @@ const Checkout = () => {
       throw new Error('Payment gateway is not available. Please refresh the page and try again.');
     }
 
-    // Create Razorpay order for full amount
-    const response = await paymentAPI.createRazorpayOrder(shippingAddress);
+    // Create Razorpay order for full amount (send coupon so backend charges the discounted price)
+    const response = await paymentAPI.createRazorpayOrder({
+      shippingAddress,
+      couponCode: appliedCoupon?.code || '',
+    });
 
     if (!response.success) {
       throw new Error(response.message || 'Failed to create payment order');
@@ -1199,4 +1202,3 @@ const Checkout = () => {
 };
 
 export default Checkout;
-
