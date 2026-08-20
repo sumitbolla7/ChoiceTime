@@ -68,7 +68,8 @@ const buildOldWomenQuery = (reqQuery) => {
     // Exclude saree from old schema
     if (normalizedSubCategory === 'saree') {
       query._id = null; // Return no results
-      return query;
+      query.isActive = { $ne: false };
+  return query;
     }
     query.subCategory = { $regex: new RegExp(`^${normalizedSubCategory}$`, 'i') };
   }
@@ -81,6 +82,7 @@ const buildOldWomenQuery = (reqQuery) => {
     query.$text = { $search: reqQuery.search };
   }
 
+  query.isActive = { $ne: false };
   return query;
 };
 
@@ -98,7 +100,8 @@ const buildSareeQuery = (reqQuery) => {
     if (normalizedSubCategory !== 'saree' && normalizedSubCategory !== 'sari') {
       // For non-saree subcategories, return empty
       query._id = null; // This will return no results
-      return query;
+      query.isActive = { $ne: false };
+  return query;
     }
     // If subCategory is saree, query all sarees (no category filter needed)
   }
@@ -120,6 +123,7 @@ const buildSareeQuery = (reqQuery) => {
     query.$text = { $search: reqQuery.search };
   }
 
+  query.isActive = { $ne: false };
   return query;
 };
 
