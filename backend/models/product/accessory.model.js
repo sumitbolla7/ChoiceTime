@@ -22,8 +22,8 @@ const accessorySchema = new mongoose.Schema({
     immutable: true,
   },
   subCategory: {
-    type: String,
-    trim: true,
+    type: mongoose.Schema.Types.Mixed,
+    default: ''
   },
   gender: {
     type: String,
