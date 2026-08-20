@@ -94,8 +94,12 @@ const CategoryPage = () => {
         let productsList = response.data.products || [];
         if (subCategoryParam && productsList.length > 0) {
           productsList = productsList.filter((p) => {
-            const pSub = (p.subCategory || '').toLowerCase().trim();
-            return pSub === subCategoryParam.toLowerCase().trim();
+            const pSub = p.subCategory || p.subcategory || '';
+            const target = subCategoryParam.toLowerCase().trim();
+            if (Array.isArray(pSub)) {
+              return pSub.some(s => String(s).toLowerCase().trim() === target);
+            }
+            return String(pSub).toLowerCase().trim() === target;
           });
         }
         setAllProducts(productsList);
