@@ -18,7 +18,7 @@ export const getWatchesNew = async (req, res) => {
       order = 'desc',
     } = req.query;
 
-    const query = {};
+    const query = { isActive: { $ne: false } };
 
     if (category) {
       query.category = category.toUpperCase();
