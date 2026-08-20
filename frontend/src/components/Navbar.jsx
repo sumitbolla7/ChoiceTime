@@ -178,7 +178,7 @@ const Navbar = () => {
               <div className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2">
                 <Link to="/" onClick={scrollToTop} className="flex-shrink-0 group relative z-10">
                   <img
-                    src="https://ik.imagekit.io/pyd0fawt1/choice%20logo?updatedAt=1781467816703"
+                    src="https://ik.imagekit.io/pyd0fawt1/choice%20logo"
                     alt="choicetime"
                     className="h-10 md:h-14 w-auto object-contain"
                     loading="eager"
@@ -207,7 +207,7 @@ const Navbar = () => {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search..."
-                      className={`bg-transparent border-none outline-none text-sm ml-2 w-full transition-all duration-300 ${isDesktopSearchExpanded ? 'opacity-100 visible' : 'opacity-0 invisible w-0'}`}
+                      className={`bg-transparent border-none outline-none text-sm ml-2 w-full transition-all duration-300 ${isDesktopSearchExpanded ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
                     />
                     {isDesktopSearchExpanded && (
                       <button type="button" onClick={(e) => { e.stopPropagation(); setIsDesktopSearchExpanded(false); }} className="text-gray-400 hover:text-gray-600">
@@ -230,7 +230,7 @@ const Navbar = () => {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     </Link>
                   ) : (
-                    <Link to="/login" className="text-xs font-bold text-gray-900 uppercase tracking-wider border border-gray-300 px-4 py-2 rounded-full hover:bg-black hover:text-white transition-all">
+                    <Link to="/login" className="text-xs font-bold text-gray-900 uppercase tracking-wider border border-gray-300 px-4 py-2 rounded-full hover:bg-black hover:text-white transition-colors">
                       Login
                     </Link>
                   )}
@@ -238,7 +238,7 @@ const Navbar = () => {
 
                 {/* Wishlist */}
                 <Link to="/wishlist" className="hidden md:block p-2 text-gray-800 hover:bg-gray-100 rounded-full transition-colors relative">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364l8.918 8.918a1.5 1.5 0 002.121 0l8.918-8.918a4.5 4.5 0 00-6.364-6.364L12 7.622l-1.591-1.591a4.5 4.5 0 00-6.364 0z" /></svg>
                   {getWishlistCount() > 0 && (
                     <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">
                       {getWishlistCount()}
@@ -344,7 +344,7 @@ const Navbar = () => {
             <Link to="/" onClick={scrollToTop} className="flex flex-col items-center min-w-[3.5rem] group">
               <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${activeCategory === 'home' ? 'text-black' : 'text-gray-400 group-active:scale-90'}`}>
                 {activeCategory === 'home' && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-black rounded-full"></span>}
-                <svg className="w-[22px] h-[22px]" fill={activeCategory === 'home' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeCategory === 'home' ? 0 : 1.8}>
+                <svg className="w-[22px] h-[22px]" fill={activeCategory === 'home' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeCategory === 'home' ? 0 : 1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
                 </svg>
               </div>
@@ -366,8 +366,8 @@ const Navbar = () => {
             <Link to="/wishlist" className="flex flex-col items-center min-w-[3.5rem] group">
               <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${location.pathname === '/wishlist' ? 'text-red-500' : 'text-gray-400 group-active:scale-90'}`}>
                 {location.pathname === '/wishlist' && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-red-500 rounded-full"></span>}
-                <svg className="w-[22px] h-[22px]" fill={location.pathname === '/wishlist' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={location.pathname === '/wishlist' ? 0 : 1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                <svg className="w-[22px] h-[22px]" fill={location.pathname === '/wishlist' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={location.pathname === '/wishlist' ? 0 : 1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 13.5 9 13.5s9-6.28 9-13.5z" />
                 </svg>
                 {getWishlistCount() > 0 && (
                   <span className="absolute -top-0.5 -right-1 bg-red-500 text-white text-[8px] min-w-[16px] h-4 flex items-center justify-center rounded-full font-bold px-1 ring-2 ring-white">
@@ -382,8 +382,8 @@ const Navbar = () => {
             <Link to="/cart" className="flex flex-col items-center min-w-[3.5rem] group">
               <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${location.pathname === '/cart' ? 'text-black' : 'text-gray-400 group-active:scale-90'}`}>
                 {location.pathname === '/cart' && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-black rounded-full"></span>}
-                <svg className="w-[22px] h-[22px]" fill={location.pathname === '/cart' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={location.pathname === '/cart' ? 0 : 1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                <svg className="w-[22px] h-[22px]" fill={location.pathname === '/cart' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={location.pathname === '/cart' ? 0 : 1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.461 1.119 1.007zM8.25 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15.75 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
                 </svg>
                 {getCartItemsCount() > 0 && (
                   <span className="absolute -top-0.5 -right-1 bg-black text-white text-[8px] min-w-[16px] h-4 flex items-center justify-center rounded-full font-bold px-1 ring-2 ring-white">
@@ -398,7 +398,7 @@ const Navbar = () => {
             <Link to={isAuthenticated ? "/profile" : "/login"} className="flex flex-col items-center min-w-[3.5rem] group">
               <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${['/profile', '/login'].includes(location.pathname) ? 'text-black' : 'text-gray-400 group-active:scale-90'}`}>
                 {['/profile', '/login'].includes(location.pathname) && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-black rounded-full"></span>}
-                <svg className="w-[22px] h-[22px]" fill={['/profile', '/login'].includes(location.pathname) ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={['/profile', '/login'].includes(location.pathname) ? 0 : 1.8}>
+                <svg className="w-[22px] h-[22px]" fill={['/profile', '/login'].includes(location.pathname) ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={['/profile', '/login'].includes(location.pathname) ? 0 : 1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
               </div>
@@ -429,7 +429,7 @@ const Navbar = () => {
             <div className="flex items-center gap-3">
               <Link to="/" onClick={() => { setIsMobileMenuOpen(false); scrollToTop(); }}>
                 <img
-                  src="https://ik.imagekit.io/pyd0fawt1/choice%20logo?updatedAt=1781467816703"
+                  src="https://ik.imagekit.io/pyd0fawt1/choice%20logo"
                   alt="choicetime"
                   className="h-12 w-auto object-contain"
                   loading="eager"
@@ -511,7 +511,7 @@ const Navbar = () => {
                     className="w-full flex items-center justify-between py-4 text-base font-medium text-gray-800"
                   >
                     <span>{link.label}</span>
-                    <svg className={`w-4 h-4 transition-transform duration-300 ${expandedMobileCategory === link.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" /></svg>
+                    <svg className={`w-4 h-4 transition-transform duration-300 ${expandedMobileCategory === link.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                   </button>
 
                   <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedMobileCategory === link.id ? 'max-h-96 opacity-100 pb-4' : 'max-h-0 opacity-0'}`}>
