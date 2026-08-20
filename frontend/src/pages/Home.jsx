@@ -21,10 +21,10 @@ const Home = () => {
       <ShopByCategory />
 
       {/* Admin-managed reels — visible when at least one active reel exists */}
-      <TrendingReels />
+      {/* <TrendingReels /> */}
 
       {/* Explore Collections - Subcategory Marquee (Our Brands) */}
-      <SubcategoryMarquee />
+      {/* <SubcategoryMarquee /> */}
 
       {/* One row per category: real top sellers from orders; random until sales exist */}
       <CategoryTopSellingSections />
