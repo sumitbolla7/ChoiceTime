@@ -160,7 +160,7 @@ const Navbar = () => {
               : 'bg-brown-50 border-gray-400'}`}
         >
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 py-0.5">
-            <div className="relative flex items-center justify-between h-12 md:h-16">
+            <div className="relative flex items-center justify-between h-24 md:h-52">
 
               {/* LEFT: Home */}
               <div className="hidden md:flex items-center gap-6">
@@ -180,7 +180,7 @@ const Navbar = () => {
                   <img
                     src="https://ik.imagekit.io/pyd0fawt1/choice%20logo"
                     alt="choicetime"
-                    className="h-10 md:h-14 w-auto object-contain"
+                    className="h-30 md:h-42 w-auto object-contain"
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
@@ -431,7 +431,7 @@ const Navbar = () => {
                 <img
                   src="https://ik.imagekit.io/pyd0fawt1/choice%20logo"
                   alt="choicetime"
-                  className="h-12 w-auto object-contain"
+                  className="h-16 w-auto object-contain"
                   loading="eager"
                   decoding="async"
                 />
