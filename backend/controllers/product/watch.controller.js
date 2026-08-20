@@ -144,6 +144,7 @@ const buildOldWatchQuery = (reqQuery) => {
     query.$text = { $search: reqQuery.search };
   }
 
+  query.isActive = { $ne: false };
   return query;
 };
 
@@ -175,6 +176,7 @@ const buildNewWatchQuery = (reqQuery) => {
     query.$text = { $search: reqQuery.search };
   }
 
+  query.isActive = { $ne: false };
   return query;
 };
 
