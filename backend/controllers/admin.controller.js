@@ -8,6 +8,13 @@ import ShippingReturnPolicy from '../models/ShippingReturnPolicy.js';
 import ReturnRequest from '../models/ReturnRequest.js';
 import Setting from '../models/Setting.js';
 
+const sanitizeSubCategory = (sub) => {
+  if (Array.isArray(sub)) {
+    return sub.map(s => String(s).trim()).filter(Boolean);
+  }
+  return typeof sub === 'string' ? sub.trim() : sub;
+};
+
 export const getDashboardSummary = async (req, res) => {
   try {
     const [
@@ -211,7 +218,7 @@ export const createProduct = async (req, res) => {
       name: (productData.name || '').trim(),
       brand: (productData.brand || '').trim(),
       category: cat,
-      subCategory: (subCategory || productData.subCategory || '').trim(),
+      subCategory: sanitizeSubCategory(subCategory || productData.subCategory),
       gender: productData.gender || undefined,
       price,
       originalPrice: originalPrice || price,
@@ -279,7 +286,7 @@ export const updateProduct = async (req, res) => {
       ...(productData.name !== undefined && { name: (productData.name || '').trim() }),
       ...(productData.brand !== undefined && { brand: (productData.brand || '').trim() }),
       ...(category !== undefined && { category: String(category).toLowerCase() }),
-      ...(subCategory !== undefined && { subCategory: subCategory }),
+      ...(subCategory !== undefined && { subCategory: sanitizeSubCategory(subCategory) }),
       ...(productData.gender !== undefined && { gender: productData.gender }),
       ...(productData.price !== undefined && { price }),
       ...(productData.originalPrice !== undefined && { originalPrice: originalPrice || price }),
