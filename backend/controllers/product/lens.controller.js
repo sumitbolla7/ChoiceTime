@@ -18,7 +18,7 @@ export const getLenses = async (req, res) => {
       order = 'desc',
     } = req.query;
 
-    const query = {};
+    const query = { isActive: { $ne: false } };
 
     if (gender) {
       query.gender = gender.toLowerCase();
