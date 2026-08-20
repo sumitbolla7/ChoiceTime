@@ -203,6 +203,7 @@ const buildOldMenQuery = (reqQuery) => {
     query.$text = { $search: reqQuery.search };
   }
 
+  query.isActive = { $ne: false };
   return query;
 };
 
@@ -242,6 +243,7 @@ const buildNewMenTshirtQuery = (reqQuery) => {
     query.$text = { $search: reqQuery.search };
   }
 
+  query.isActive = { $ne: false };
   return query;
 };
 
@@ -280,6 +282,7 @@ const buildNewShoesQuery = (reqQuery) => {
     query.$text = { $search: reqQuery.search };
   }
 
+  query.isActive = { $ne: false };
   return query;
 };
 
