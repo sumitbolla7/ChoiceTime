@@ -127,7 +127,7 @@ const AdminDashboard = () => {
     price: '',
     originalPrice: '',
     discountPercent: 0,
-    subCategory: '',
+    subCategory: [],
     stock: 10,
     images: '',
     description: '',
@@ -1146,7 +1146,7 @@ const AdminDashboard = () => {
       };
       // Reset subCategory when category changes
       if (name === 'category') {
-        updated.subCategory = '';
+        updated.subCategory = [];
       }
       // Auto-calculate discount when price or originalPrice changes
       if (name === 'price' || name === 'originalPrice') {
@@ -1180,7 +1180,7 @@ const AdminDashboard = () => {
       price: '',
       originalPrice: '',
       discountPercent: 0,
-      subCategory: '',
+      subCategory: [],
       stock: 10,
       images: '',
       description: '',
@@ -1276,7 +1276,9 @@ const AdminDashboard = () => {
       price: price || '',
       originalPrice: originalPrice || '',
       discountPercent: calculatedDiscount,
-      subCategory: product.subCategory || '',
+      subCategory: Array.isArray(product.subCategory)
+        ? product.subCategory
+        : (product.subCategory ? [product.subCategory] : []),
       stock: product.stock || 10,
       images: product.images?.join(', ') || '',
       description: product.description || '',
@@ -1540,20 +1542,22 @@ const AdminDashboard = () => {
         let filteredProducts = filteredProductsBySearch;
         if (selectedSubCategory) {
           filteredProducts = filteredProducts.filter((product) => {
-            const productSubCategory = (product.subCategory || product.subcategory || '').toLowerCase().trim();
+            const sub = product.subCategory || product.subcategory || '';
             const normalizedSelectedSub = selectedSubCategory.toLowerCase().trim();
+            const hasMatch = Array.isArray(sub)
+              ? sub.some(s => String(s).toLowerCase().trim() === normalizedSelectedSub)
+              : String(sub).toLowerCase().trim() === normalizedSelectedSub;
             if (normalizedSelectedSub === 'saree') {
               const title = (product.title || product.name || '').toLowerCase();
               const isSareeByTitle = title.includes('saree') || title.includes('sari');
               const isSareeByCategory = product.category === 'saree' || product.category === 'Saree';
               return (
-                productSubCategory === 'saree' ||
-                productSubCategory === 'sari' ||
+                hasMatch ||
                 isSareeByTitle ||
                 isSareeByCategory
               );
             }
-            return productSubCategory === normalizedSelectedSub;
+            return hasMatch;
           });
         }
 
@@ -1954,27 +1958,43 @@ const AdminDashboard = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                  <select
-                      name="subCategory"
-                      value={productForm.subCategory}
-                      onChange={handleProductFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      disabled={!productForm.category}
-                    >
-                    <option value="">
-                      {productForm.category
-                        ? 'Select Company'
-                        : 'Select Category First'}
-                    </option>
-                    {productSubCategoryOptionsFromNav.map((subOpt, idx) => (
-                      <option key={idx} value={subOpt.value}>
-                        {subOpt.label}
-                      </option>
-                    ))}
-                  </select>
-                  {productForm.category && productSubCategoryOptionsFromNav.length === 0 && (
-                    <p className="text-xs text-gray-500 mt-1">No companies for this category</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory (Select Companies)</label>
+                  {productForm.category ? (
+                    productSubCategoryOptionsFromNav.length > 0 ? (
+                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-white">
+                        {productSubCategoryOptionsFromNav.map((subOpt, idx) => {
+                          const isChecked = Array.isArray(productForm.subCategory)
+                            ? productForm.subCategory.includes(subOpt.value)
+                            : productForm.subCategory === subOpt.value;
+                          return (
+                            <label key={idx} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-0.5 rounded transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const val = subOpt.value;
+                                  setProductForm((prev) => {
+                                    const currentSubs = Array.isArray(prev.subCategory)
+                                      ? prev.subCategory
+                                      : (prev.subCategory ? [prev.subCategory] : []);
+                                    const newSubs = e.target.checked
+                                      ? [...currentSubs, val]
+                                      : currentSubs.filter((s) => s !== val);
+                                    return { ...prev, subCategory: newSubs };
+                                  });
+                                }}
+                                className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                              />
+                              <span className="select-none">{subOpt.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border">No companies for this category — add them in Nav Categories section.</p>
+                    )
+                  ) : (
+                    <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border">Select a category first to see companies</p>
                   )}
                 </div>
                 <div>
@@ -2533,25 +2553,43 @@ const AdminDashboard = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                    <select
-                      name="subCategory"
-                      value={productForm.subCategory}
-                      onChange={handleProductFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      disabled={!productForm.category}
-                    >
-                      <option value="">
-                        {productForm.category ? 'Select Company' : 'Select Category First'}
-                      </option>
-                      {productSubCategoryOptionsFromNav.map((subOpt, idx) => (
-                        <option key={idx} value={subOpt.value}>
-                          {subOpt.label}
-                        </option>
-                      ))}
-                    </select>
-                    {productForm.category && productSubCategoryOptionsFromNav.length === 0 && (
-                      <p className="text-xs text-gray-500 mt-1">No companies for this category</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory (Select Companies)</label>
+                    {productForm.category ? (
+                      productSubCategoryOptionsFromNav.length > 0 ? (
+                        <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-white">
+                          {productSubCategoryOptionsFromNav.map((subOpt, idx) => {
+                            const isChecked = Array.isArray(productForm.subCategory)
+                              ? productForm.subCategory.includes(subOpt.value)
+                              : productForm.subCategory === subOpt.value;
+                            return (
+                              <label key={idx} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-0.5 rounded transition-colors">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    const val = subOpt.value;
+                                    setProductForm((prev) => {
+                                      const currentSubs = Array.isArray(prev.subCategory)
+                                        ? prev.subCategory
+                                        : (prev.subCategory ? [prev.subCategory] : []);
+                                      const newSubs = e.target.checked
+                                        ? [...currentSubs, val]
+                                        : currentSubs.filter((s) => s !== val);
+                                      return { ...prev, subCategory: newSubs };
+                                    });
+                                  }}
+                                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                />
+                                <span className="select-none">{subOpt.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border">No companies for this category — add them in Nav Categories section.</p>
+                      )
+                    ) : (
+                      <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border">Select a category first to see companies</p>
                     )}
                   </div>
                   <div>
