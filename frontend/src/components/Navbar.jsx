@@ -160,7 +160,7 @@ const Navbar = () => {
               : 'bg-brown-50 border-gray-400'}`}
         >
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 py-0.5">
-            <div className="relative flex items-center justify-between h-24 md:h-52">
+            <div className="relative flex items-center justify-between h-16 md:h-20">
 
               {/* LEFT: Home */}
               <div className="hidden md:flex items-center gap-6">
@@ -178,9 +178,9 @@ const Navbar = () => {
               <div className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2">
                 <Link to="/" onClick={scrollToTop} className="flex-shrink-0 group relative z-10">
                   <img
-                    src="https://ik.imagekit.io/pyd0fawt1/choice%20logo"
+                    src="https://ik.imagekit.io/l6od6mlo3j/ChatGPT%20Image%20Aug%2021,%202026,%2002_04_50%20AM.png"
                     alt="choicetime"
-                    className="h-30 md:h-42 w-auto object-contain"
+                    className="h-10 md:h-14 w-auto object-contain"
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
@@ -429,9 +429,9 @@ const Navbar = () => {
             <div className="flex items-center gap-3">
               <Link to="/" onClick={() => { setIsMobileMenuOpen(false); scrollToTop(); }}>
                 <img
-                  src="https://ik.imagekit.io/pyd0fawt1/choice%20logo"
+                  src="https://ik.imagekit.io/l6od6mlo3j/ChatGPT%20Image%20Aug%2021,%202026,%2002_04_50%20AM.png"
                   alt="choicetime"
-                  className="h-16 w-auto object-contain"
+                  className="h-10 w-auto object-contain"
                   loading="eager"
                   decoding="async"
                 />
