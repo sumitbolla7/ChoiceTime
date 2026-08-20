@@ -5,7 +5,7 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     brand: { type: String, trim: true, default: '' },
     category: { type: String, required: true, trim: true }, // men, women, watches, lens, accessories, shoes, saree
-    subCategory: { type: String, trim: true, default: '' },
+    subCategory: { type: mongoose.Schema.Types.Mixed, default: '' },
     gender: { type: String, trim: true, default: '' },
 
     price: { type: Number, required: true, min: 0 },
