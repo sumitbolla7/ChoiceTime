@@ -1360,7 +1360,8 @@ const AdminDashboard = () => {
       resetForm();
       fetchProducts(productForm.category);
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Failed to create product' });
+      const detail = error.response?.data?.error || error.response?.data?.message || '';
+      setMessage({ type: 'error', text: `${error.message || 'Failed to create product'}${detail ? `: ${detail}` : ''}` });
     }
   };
 
@@ -1418,7 +1419,8 @@ const AdminDashboard = () => {
       fetchProducts(productForm.category);
       setActiveSection('products');
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Failed to update product' });
+      const detail = error.response?.data?.error || error.response?.data?.message || '';
+      setMessage({ type: 'error', text: `${error.message || 'Failed to update product'}${detail ? `: ${detail}` : ''}` });
     }
   };
 
