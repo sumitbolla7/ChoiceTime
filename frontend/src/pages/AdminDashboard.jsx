@@ -1278,7 +1278,9 @@ const AdminDashboard = () => {
       discountPercent: calculatedDiscount,
       subCategory: Array.isArray(product.subCategory)
         ? product.subCategory
-        : (product.subCategory ? [product.subCategory] : []),
+        : (typeof product.subCategory === 'string' && product.subCategory.includes(',')
+            ? product.subCategory.split(',').map(s => s.trim()).filter(Boolean)
+            : (product.subCategory ? [product.subCategory] : [])),
       stock: product.stock || 10,
       images: product.images?.join(', ') || '',
       description: product.description || '',
@@ -1322,7 +1324,9 @@ const AdminDashboard = () => {
         category: productForm.category,
         name: productForm.name,
         brand: productForm.brand,
-        subCategory: productForm.subCategory || '',
+        subCategory: Array.isArray(productForm.subCategory)
+          ? productForm.subCategory.filter(Boolean).join(', ')
+          : (productForm.subCategory || '').trim(),
         price: Number(productForm.price),
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
@@ -1381,7 +1385,9 @@ const AdminDashboard = () => {
         category: productForm.category,
         name: productForm.name,
         brand: productForm.brand,
-        subCategory: productForm.subCategory || '',
+        subCategory: Array.isArray(productForm.subCategory)
+          ? productForm.subCategory.filter(Boolean).join(', ')
+          : (productForm.subCategory || '').trim(),
         price: Number(productForm.price),
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
@@ -1544,11 +1550,11 @@ const AdminDashboard = () => {
         let filteredProducts = filteredProductsBySearch;
         if (selectedSubCategory) {
           filteredProducts = filteredProducts.filter((product) => {
-            const sub = product.subCategory || product.subcategory || '';
+            const sub = String(product.subCategory || product.subcategory || '').toLowerCase();
             const normalizedSelectedSub = selectedSubCategory.toLowerCase().trim();
-            const hasMatch = Array.isArray(sub)
-              ? sub.some(s => String(s).toLowerCase().trim() === normalizedSelectedSub)
-              : String(sub).toLowerCase().trim() === normalizedSelectedSub;
+            const hasMatch = Array.isArray(product.subCategory)
+              ? product.subCategory.some(s => String(s).toLowerCase().trim() === normalizedSelectedSub)
+              : sub.includes(normalizedSelectedSub);
             if (normalizedSelectedSub === 'saree') {
               const title = (product.title || product.name || '').toLowerCase();
               const isSareeByTitle = title.includes('saree') || title.includes('sari');
