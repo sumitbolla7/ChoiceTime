@@ -16,11 +16,43 @@ import Lens from '../models/product/lens.model.js';
 import Shoes from '../models/product/shoes.model.js';
 import MenTshirt from '../models/product/menTshirt.model.js';
 
+const slugifySubCategory = (text) =>
+  String(text || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 const sanitizeSubCategory = (sub) => {
-  if (Array.isArray(sub)) {
-    return sub.map(s => String(s).trim()).filter(Boolean);
+  const parts = Array.isArray(sub)
+    ? sub
+    : String(sub || '').split(',');
+  return parts
+    .map((s) => {
+      const trimmed = String(s).trim();
+      return slugifySubCategory(trimmed) || trimmed;
+    })
+    .filter(Boolean)
+    .join(', ');
+};
+
+const parseBooleanFlag = (value) => {
+  if (value === true || value === 'true' || value === 1 || value === '1') return true;
+  if (value === false || value === 'false' || value === 0 || value === '0') return false;
+  return undefined;
+};
+
+/** Infer gender from nav category slug so mens/womens watch pages resolve correctly. */
+const inferGenderFromCategory = (category, explicitGender) => {
+  if (explicitGender !== undefined && explicitGender !== null && String(explicitGender).trim() !== '') {
+    return String(explicitGender).trim().toLowerCase();
   }
-  return typeof sub === 'string' ? sub.trim() : sub;
+  const cat = String(category || '').toLowerCase();
+  if (cat.includes('womens-watch') || cat === 'women' || cat.startsWith('women')) return 'women';
+  if (cat.includes('mens-watch') || cat === 'men' || cat.startsWith('men')) return 'men';
+  if (cat.includes('watch')) return 'unisex';
+  return undefined;
 };
 
 export const getDashboardSummary = async (req, res) => {
@@ -199,8 +231,25 @@ export const deleteOrder = async (req, res) => {
 export const getAdminProducts = async (req, res) => {
   try {
     const { category } = req.query;
-    const query = category ? { category: String(category).toLowerCase() } : {};
-    const products = await Product.find(query).sort({ updatedAt: -1 }).limit(200).lean();
+    let query = {};
+    if (category) {
+      const cat = String(category).toLowerCase().trim();
+      const slugOr = {
+        'mens-watches': [
+          { category: 'mens-watches' },
+          { category: 'watches', gender: /^men$/i },
+          { category: 'watches', gender: /^unisex$/i },
+        ],
+        'womens-watches': [
+          { category: 'womens-watches' },
+          { category: 'watches', gender: /^women$/i },
+          { category: 'watches', gender: /^unisex$/i },
+        ],
+        watches: [{ category: 'watches' }, { category: 'mens-watches' }, { category: 'womens-watches' }],
+      };
+      query = slugOr[cat] ? { $or: slugOr[cat] } : { category: cat };
+    }
+    const products = await Product.find(query).sort({ updatedAt: -1 }).limit(1000).lean();
     res.status(200).json({
       success: true,
       data: { products },
@@ -222,12 +271,13 @@ export const createProduct = async (req, res) => {
     const originalPrice = Number(productData.originalPrice ?? productData.price ?? 0);
     const stockNum = Number(productData.stock ?? 0);
     const imagesArr = Array.isArray(productData.images) ? productData.images : [];
+    const inferredGender = inferGenderFromCategory(cat, productData.gender);
     const createPayload = {
       name: (productData.name || '').trim(),
       brand: (productData.brand || '').trim(),
       category: cat,
       subCategory: sanitizeSubCategory(subCategory || productData.subCategory),
-      gender: productData.gender || undefined,
+      ...(inferredGender && { gender: inferredGender }),
       price,
       originalPrice: originalPrice || price,
       discountPercent: Number(productData.discountPercent ?? 0),
@@ -238,7 +288,7 @@ export const createProduct = async (req, res) => {
       isNewArrival: Boolean(productData.isNewArrival),
       onSale: Boolean(productData.onSale),
       isFeatured: Boolean(productData.isFeatured),
-      isActive: productData.isActive !== undefined ? Boolean(productData.isActive) : true,
+      isActive: parseBooleanFlag(productData.isActive) !== false,
       inStock: stockNum > 0,
       rating: Number(productData.rating ?? 0),
       ratingsCount: Number(productData.ratingsCount ?? 0),
@@ -285,50 +335,94 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
-    let { category, subCategory, ...productData } = req.body;
-    const price = Number(productData.price ?? 0);
-    const originalPrice = Number(productData.originalPrice ?? productData.price ?? 0);
-    const stockNum = Number(productData.stock ?? 0);
-    const imagesArr = Array.isArray(productData.images) ? productData.images : [];
-    const updatePayload = {
-      ...(productData.name !== undefined && { name: (productData.name || '').trim() }),
-      ...(productData.brand !== undefined && { brand: (productData.brand || '').trim() }),
-      ...(category !== undefined && { category: String(category).toLowerCase() }),
-      ...(subCategory !== undefined && { subCategory: sanitizeSubCategory(subCategory) }),
-      ...(productData.gender !== undefined && { gender: productData.gender }),
-      ...(productData.price !== undefined && { price, finalPrice: price }),
-      ...(productData.originalPrice !== undefined && { originalPrice: originalPrice || price }),
-      ...(productData.discountPercent !== undefined && { discountPercent: Number(productData.discountPercent) }),
-      ...(productData.stock !== undefined && { stock: stockNum }),
-      ...(productData.images !== undefined && { images: imagesArr }),
-      ...(productData.description !== undefined && { description: (productData.description || '').trim() }),
-      ...(productData.isNewArrival !== undefined && { isNewArrival: Boolean(productData.isNewArrival) }),
-      ...(productData.onSale !== undefined && { onSale: Boolean(productData.onSale) }),
-      ...(productData.isFeatured !== undefined && { isFeatured: Boolean(productData.isFeatured) }),
-      ...(productData.isActive !== undefined && { isActive: Boolean(productData.isActive) }),
-      ...(productData.stock !== undefined && { inStock: stockNum > 0 }),
-      ...(productData.colorOptions !== undefined && { colorOptions: productData.colorOptions }),
-      ...(productData.boxOptions !== undefined && { boxOptions: productData.boxOptions }),
-      // Page position fields
-      ...(productData.pageNumberAll !== undefined && { pageNumberAll: Number(productData.pageNumberAll ?? 0) }),
-      ...(productData.pageNumberCategory !== undefined && { pageNumberCategory: Number(productData.pageNumberCategory ?? 0) }),
-      // Watch specific fields
-      ...(productData.model !== undefined && { model: (productData.model || '').trim() }),
-      ...(productData.functions !== undefined && { functions: (productData.functions || '').trim() }),
-      ...(productData.dialColor !== undefined && { dialColor: (productData.dialColor || '').trim() }),
-      ...(productData.dialSize !== undefined && { dialSize: (productData.dialSize || '').trim() }),
-      ...(productData.strapColor !== undefined && { strapColor: (productData.strapColor || '').trim() }),
-      ...(productData.strapMaterial !== undefined && { strapMaterial: (productData.strapMaterial || '').trim() }),
-      ...(productData.crystalMaterial !== undefined && { crystalMaterial: (productData.crystalMaterial || '').trim() }),
-      ...(productData.lockType !== undefined && { lockType: (productData.lockType || '').trim() }),
-      ...(productData.waterResistance !== undefined && { waterResistance: (productData.waterResistance || '').trim() }),
-      ...(productData.calendarType !== undefined && { calendarType: (productData.calendarType || '').trim() }),
-      ...(productData.movement !== undefined && { movement: (productData.movement || '').trim() }),
-      ...(productData.itemWeight !== undefined && { itemWeight: (productData.itemWeight || '').trim() }),
-      ...(productData.quality !== undefined && { quality: (productData.quality || '').trim() }),
-      ...(productData.warranty !== undefined && { warranty: (productData.warranty || '').trim() }),
-    };
-    const product = await Product.findByIdAndUpdate(req.params.id, updatePayload, { new: true });
+    // Only apply fields that are actually present — so Live on Site toggles
+    // ({ isActive: false }) never wipe price/stock/subCategory by accident.
+    const body = req.body || {};
+    const { category, subCategory, ...productData } = body;
+    const updatePayload = {};
+
+    if (productData.name !== undefined) updatePayload.name = String(productData.name || '').trim();
+    if (productData.brand !== undefined) updatePayload.brand = String(productData.brand || '').trim();
+    if (category !== undefined) {
+      const cat = String(category).toLowerCase();
+      updatePayload.category = cat;
+      const inferred = inferGenderFromCategory(cat, productData.gender);
+      if (inferred) updatePayload.gender = inferred;
+    } else if (productData.gender !== undefined) {
+      updatePayload.gender = productData.gender;
+    }
+    if (subCategory !== undefined) updatePayload.subCategory = sanitizeSubCategory(subCategory);
+
+    if (productData.price !== undefined) {
+      const price = Number(productData.price);
+      updatePayload.price = price;
+      updatePayload.finalPrice = price;
+    }
+    if (productData.originalPrice !== undefined) {
+      const price = Number(productData.price ?? productData.originalPrice ?? 0);
+      updatePayload.originalPrice = Number(productData.originalPrice) || price;
+    }
+    if (productData.discountPercent !== undefined) {
+      updatePayload.discountPercent = Number(productData.discountPercent);
+    }
+    if (productData.stock !== undefined) {
+      const stockNum = Number(productData.stock ?? 0);
+      updatePayload.stock = stockNum;
+      updatePayload.inStock = stockNum > 0;
+    }
+    if (productData.images !== undefined) {
+      updatePayload.images = Array.isArray(productData.images) ? productData.images : [];
+    }
+    if (productData.description !== undefined) {
+      updatePayload.description = String(productData.description || '').trim();
+    }
+    if (productData.isNewArrival !== undefined) updatePayload.isNewArrival = Boolean(productData.isNewArrival);
+    if (productData.onSale !== undefined) updatePayload.onSale = Boolean(productData.onSale);
+    if (productData.isFeatured !== undefined) updatePayload.isFeatured = Boolean(productData.isFeatured);
+
+    // Persist Live on Site even when it is the only field in the request
+    if (Object.prototype.hasOwnProperty.call(body, 'isActive')) {
+      const flag = parseBooleanFlag(body.isActive);
+      if (flag !== undefined) updatePayload.isActive = flag;
+    }
+
+    if (productData.colorOptions !== undefined) updatePayload.colorOptions = productData.colorOptions;
+    if (productData.boxOptions !== undefined) updatePayload.boxOptions = productData.boxOptions;
+    if (productData.pageNumberAll !== undefined) updatePayload.pageNumberAll = Number(productData.pageNumberAll ?? 0);
+    if (productData.pageNumberCategory !== undefined) {
+      updatePayload.pageNumberCategory = Number(productData.pageNumberCategory ?? 0);
+    }
+    if (productData.model !== undefined) updatePayload.model = String(productData.model || '').trim();
+    if (productData.functions !== undefined) updatePayload.functions = String(productData.functions || '').trim();
+    if (productData.dialColor !== undefined) updatePayload.dialColor = String(productData.dialColor || '').trim();
+    if (productData.dialSize !== undefined) updatePayload.dialSize = String(productData.dialSize || '').trim();
+    if (productData.strapColor !== undefined) updatePayload.strapColor = String(productData.strapColor || '').trim();
+    if (productData.strapMaterial !== undefined) updatePayload.strapMaterial = String(productData.strapMaterial || '').trim();
+    if (productData.crystalMaterial !== undefined) {
+      updatePayload.crystalMaterial = String(productData.crystalMaterial || '').trim();
+    }
+    if (productData.lockType !== undefined) updatePayload.lockType = String(productData.lockType || '').trim();
+    if (productData.waterResistance !== undefined) {
+      updatePayload.waterResistance = String(productData.waterResistance || '').trim();
+    }
+    if (productData.calendarType !== undefined) updatePayload.calendarType = String(productData.calendarType || '').trim();
+    if (productData.movement !== undefined) updatePayload.movement = String(productData.movement || '').trim();
+    if (productData.itemWeight !== undefined) updatePayload.itemWeight = String(productData.itemWeight || '').trim();
+    if (productData.quality !== undefined) updatePayload.quality = String(productData.quality || '').trim();
+    if (productData.warranty !== undefined) updatePayload.warranty = String(productData.warranty || '').trim();
+
+    if (Object.keys(updatePayload).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update',
+      });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $set: updatePayload },
+      { new: true, runValidators: false }
+    );
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -513,9 +607,12 @@ function normalizeSubItems(subItems, categorySlug) {
     const name = (item.name || '').trim();
     if (!name) return null;
     const basePath = `/${categorySlug}`;
-    const path = item.path && item.path.trim()
+    let path = item.path && item.path.trim()
       ? item.path.trim()
       : `${basePath}?subCategory=${slugify(item.subCategory || name)}`;
+    if (!/[?&]subCategory=/.test(path)) {
+      path += `${path.includes('?') ? '&' : '?'}subCategory=${slugify(item.subCategory || name)}`;
+    }
     return { name, path };
   }).filter(Boolean);
 }

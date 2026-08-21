@@ -3,6 +3,7 @@ import { useParams, useLocation, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
 import { productAPI, categoriesAPI } from '../utils/api';
+import { productMatchesSubCategory } from '../utils/subCategory';
 
 const CategoryPage = () => {
   const { slug } = useParams();
@@ -49,7 +50,7 @@ const CategoryPage = () => {
   // Find current category from navCategories
   const currentCategory = useMemo(() => {
     if (!slug || !navCategories.length) return null;
-    return navCategories.find((cat) => cat.id === slug || cat.path === `/${slug}`);
+    return navCategories.find((cat) => cat.id === slug || cat.slug === slug || cat.path === `/${slug}`);
   }, [slug, navCategories]);
 
   // Set page title based on category and subcategory
@@ -69,7 +70,7 @@ const CategoryPage = () => {
     }
   }, [currentCategory, subCategoryParam, slug]);
 
-  // Fetch products
+  // Fetch products (re-run when nav category resolves so company labels match filters)
   useEffect(() => {
     fetchProducts();
     setFilters({
@@ -78,7 +79,7 @@ const CategoryPage = () => {
       sizes: [],
       sortBy: null,
     });
-  }, [slug, location.search]);
+  }, [slug, location.search, currentCategory?.slug]);
 
   const fetchProducts = async () => {
     try {
@@ -98,14 +99,12 @@ const CategoryPage = () => {
         productsList = productsList.filter((p) => p.isActive !== false);
 
         if (subCategoryParam && productsList.length > 0) {
-          productsList = productsList.filter((p) => {
-            const pSub = String(p.subCategory || p.subcategory || '').toLowerCase();
-            const target = subCategoryParam.toLowerCase().trim();
-            if (Array.isArray(p.subCategory)) {
-              return p.subCategory.some(s => String(s).toLowerCase().trim() === target);
-            }
-            return pSub.includes(target);
-          });
+          const subName = currentCategory?.subItems?.find(
+            (sub) => sub.path?.includes(`subCategory=${subCategoryParam}`)
+          )?.name;
+          productsList = productsList.filter((p) =>
+            productMatchesSubCategory(p, subCategoryParam, subName ? [subName] : [])
+          );
         }
         setAllProducts(productsList);
       } else {

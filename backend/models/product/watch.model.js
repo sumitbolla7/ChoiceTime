@@ -115,6 +115,10 @@ const watchSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
   inStock: {
     type: Boolean,
     default: true,

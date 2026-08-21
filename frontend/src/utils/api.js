@@ -47,6 +47,21 @@ const writeGetCache = (key, data) => {
   }
 };
 
+const clearGetCache = (substring = '') => {
+  for (const key of [...memoryGetCache.keys()]) {
+    if (!substring || key.includes(substring)) memoryGetCache.delete(key);
+  }
+  try {
+    Object.keys(sessionStorage).forEach((k) => {
+      if (k.startsWith(API_CACHE_PREFIX) && (!substring || k.includes(substring))) {
+        sessionStorage.removeItem(k);
+      }
+    });
+  } catch {
+    // Ignore storage access failures.
+  }
+};
+
 // Helper function to make API requests
 const apiRequest = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
@@ -115,6 +130,10 @@ const apiRequest = async (endpoint, options = {}) => {
 
     if (canUseCache) {
       writeGetCache(getCacheKey(fullUrl), data);
+    }
+
+    if (method !== 'GET' && normalizedEndpoint.toLowerCase().includes('product')) {
+      clearGetCache('/products');
     }
 
     return data;

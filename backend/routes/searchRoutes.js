@@ -27,6 +27,7 @@ router.get('/', async (req, res) => {
     const searchRegex = new RegExp(searchTerm, 'i');
 
     const searchQuery = {
+      isActive: { $ne: false },
       $or: [
         { name: searchRegex },
         { brand: searchRegex },

@@ -11,9 +11,24 @@ export const getProducts = async (req, res) => {
 
     if (category) {
       const cat = String(category).toLowerCase().trim();
-      if (['men', 'women', 'watches', 'watch', 'lens', 'lenses', 'accessories', 'accessory', 'shoes', 'saree'].includes(cat)) {
-        if (cat === 'watch') query.category = 'watches';
-        else if (cat === 'lenses') query.category = 'lens';
+      const slugOr = {
+        'mens-watches': [
+          { category: 'mens-watches' },
+          { category: 'watches', gender: /^men$/i },
+          { category: 'watches', gender: /^unisex$/i },
+        ],
+        'womens-watches': [
+          { category: 'womens-watches' },
+          { category: 'watches', gender: /^women$/i },
+          { category: 'watches', gender: /^unisex$/i },
+        ],
+        watches: [{ category: 'watches' }, { category: 'mens-watches' }, { category: 'womens-watches' }],
+        watch: [{ category: 'watches' }, { category: 'mens-watches' }, { category: 'womens-watches' }],
+      };
+      if (slugOr[cat]) {
+        query.$or = slugOr[cat];
+      } else if (['men', 'women', 'lens', 'lenses', 'accessories', 'accessory', 'shoes', 'saree'].includes(cat)) {
+        if (cat === 'lenses') query.category = 'lens';
         else if (cat === 'accessory') query.category = 'accessories';
         else query.category = cat;
       } else {
@@ -21,7 +36,12 @@ export const getProducts = async (req, res) => {
       }
     }
 
-    if (subCategory) query.subCategory = new RegExp(String(subCategory).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\if (subCategory) query.subCategory = new RegExp(`^${String(subCategory).trim()}$`, 'i');'), 'i');
+    if (subCategory) {
+      const escaped = String(subCategory).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const spaced = escaped.replace(/-/g, '[\\s-]*');
+      // Match single or multi-company subCategory strings (e.g. "fossil, tissot")
+      query.subCategory = new RegExp(spaced, 'i');
+    }
     if (gender) query.gender = String(gender).toLowerCase().trim();
     // Hide products the admin has turned off, without deleting them
     query.isActive = { $ne: false };
@@ -29,11 +49,17 @@ export const getProducts = async (req, res) => {
     if (onSale === 'true') query.onSale = true;
     if (search && String(search).trim()) {
       const term = String(search).trim();
-      query.$or = [
+      const searchOr = [
         { name: { $regex: term, $options: 'i' } },
         { brand: { $regex: term, $options: 'i' } },
         { description: { $regex: term, $options: 'i' } },
       ];
+      if (query.$or) {
+        query.$and = [{ $or: query.$or }, { $or: searchOr }];
+        delete query.$or;
+      } else {
+        query.$or = searchOr;
+      }
     }
 
     const limitNum = Math.min(parseInt(limit, 10) || 500, 1000);

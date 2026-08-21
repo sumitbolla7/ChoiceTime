@@ -7,6 +7,13 @@ import {
   uploadImageToCloudinary,
   MAX_PRODUCT_IMAGE_BYTES,
 } from '../utils/cloudinary';
+import {
+  slugifySubCategory,
+  subCategoryValues,
+  productMatchesSubCategory,
+  hasSubCategoryOption,
+  subCategoryToPayload,
+} from '../utils/subCategory';
 
 const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
@@ -134,6 +141,7 @@ const AdminDashboard = () => {
     isNewArrival: false,
     onSale: false,
     isFeatured: false,
+    isActive: true,
     // Watch specific fields
     model: '',
     functions: '',
@@ -349,7 +357,7 @@ const AdminDashboard = () => {
     if (!selectedNavForViewProducts?.subItems?.length) return [];
     return selectedNavForViewProducts.subItems.map((si) => ({
       label: si.name,
-      value: getSubCategoryFromPath(si.path),
+      value: getSubCategoryFromPath(si.path) || slugifySubCategory(si.name),
     }));
   }, [selectedNavForViewProducts]);
 
@@ -957,7 +965,7 @@ const AdminDashboard = () => {
     if (!selectedNavCategoryForProduct?.subItems?.length) return [];
     return selectedNavCategoryForProduct.subItems.map((si) => ({
       label: si.name,
-      value: getSubCategoryFromPath(si.path),
+      value: getSubCategoryFromPath(si.path) || slugifySubCategory(si.name),
     }));
   }, [selectedNavCategoryForProduct]);
 
@@ -1187,6 +1195,7 @@ const AdminDashboard = () => {
       isNewArrival: false,
       onSale: false,
       isFeatured: false,
+      isActive: true,
       // Watch specific fields
       model: '',
       functions: '',
@@ -1276,11 +1285,7 @@ const AdminDashboard = () => {
       price: price || '',
       originalPrice: originalPrice || '',
       discountPercent: calculatedDiscount,
-      subCategory: Array.isArray(product.subCategory)
-        ? product.subCategory
-        : (typeof product.subCategory === 'string' && product.subCategory.includes(',')
-            ? product.subCategory.split(',').map(s => s.trim()).filter(Boolean)
-            : (product.subCategory ? [product.subCategory] : [])),
+      subCategory: subCategoryValues(product.subCategory),
       stock: product.stock || 10,
       images: product.images?.join(', ') || '',
       description: product.description || '',
@@ -1325,9 +1330,7 @@ const AdminDashboard = () => {
         category: productForm.category,
         name: productForm.name,
         brand: productForm.brand,
-        subCategory: Array.isArray(productForm.subCategory)
-          ? productForm.subCategory.filter(Boolean).join(', ')
-          : (productForm.subCategory || '').trim(),
+        subCategory: subCategoryToPayload(productForm.subCategory),
         price: Number(productForm.price),
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
@@ -1337,7 +1340,7 @@ const AdminDashboard = () => {
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
-        isActive: Boolean(productForm.isActive !== false),
+        isActive: productForm.isActive === false ? false : true,
         colorOptions: productForm.colorOptions
           ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
           : [],
@@ -1387,9 +1390,7 @@ const AdminDashboard = () => {
         category: productForm.category,
         name: productForm.name,
         brand: productForm.brand,
-        subCategory: Array.isArray(productForm.subCategory)
-          ? productForm.subCategory.filter(Boolean).join(', ')
-          : (productForm.subCategory || '').trim(),
+        subCategory: subCategoryToPayload(productForm.subCategory),
         price: Number(productForm.price),
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
@@ -1399,7 +1400,7 @@ const AdminDashboard = () => {
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
-        isActive: Boolean(productForm.isActive !== false),
+        isActive: productForm.isActive === false ? false : true,
         colorOptions: productForm.colorOptions
           ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
           : [],
@@ -1553,11 +1554,8 @@ const AdminDashboard = () => {
         let filteredProducts = filteredProductsBySearch;
         if (selectedSubCategory) {
           filteredProducts = filteredProducts.filter((product) => {
-            const sub = String(product.subCategory || product.subcategory || '').toLowerCase();
             const normalizedSelectedSub = selectedSubCategory.toLowerCase().trim();
-            const hasMatch = Array.isArray(product.subCategory)
-              ? product.subCategory.some(s => String(s).toLowerCase().trim() === normalizedSelectedSub)
-              : sub.includes(normalizedSelectedSub);
+            const hasMatch = productMatchesSubCategory(product, selectedSubCategory);
             if (normalizedSelectedSub === 'saree') {
               const title = (product.title || product.name || '').toLowerCase();
               const isSareeByTitle = title.includes('saree') || title.includes('sari');
@@ -1837,12 +1835,23 @@ const AdminDashboard = () => {
                                   <button
                                     title={product.isActive === false ? 'Hidden from website — click to show' : 'Live on website — click to hide'}
                                     onClick={async () => {
-                                      const nextActive = !(product.isActive !== false);
+                                      const nextActive = product.isActive === false;
                                       try {
-                                        await adminAPI.updateProduct(product._id, { isActive: nextActive });
-                                        setProducts(prev => prev.map(p => p._id === product._id ? { ...p, isActive: nextActive } : p));
+                                        const res = await adminAPI.updateProduct(product._id, { isActive: nextActive });
+                                        const saved = res?.data?.product?.isActive;
+                                        const confirmed = saved === undefined ? nextActive : saved !== false;
+                                        setProducts((prev) =>
+                                          prev.map((p) =>
+                                            p._id === product._id ? { ...p, isActive: confirmed } : p
+                                          )
+                                        );
+                                        if (editingProduct?._id === product._id) {
+                                          setProductForm((prev) => ({ ...prev, isActive: confirmed }));
+                                          setEditingProduct((prev) => (prev ? { ...prev, isActive: confirmed } : prev));
+                                        }
                                       } catch (err) {
                                         console.error('Toggle active error:', err);
+                                        setMessage({ type: 'error', text: 'Could not update Live on Site. Try again.' });
                                       }
                                     }}
                                     className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${product.isActive !== false ? 'bg-green-500' : 'bg-gray-300'}`}
@@ -1974,23 +1983,21 @@ const AdminDashboard = () => {
                     productSubCategoryOptionsFromNav.length > 0 ? (
                       <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-white">
                         {productSubCategoryOptionsFromNav.map((subOpt, idx) => {
-                          const isChecked = Array.isArray(productForm.subCategory)
-                            ? productForm.subCategory.includes(subOpt.value)
-                            : productForm.subCategory === subOpt.value;
+                          const isChecked = hasSubCategoryOption(productForm.subCategory, subOpt.value, subOpt.label);
                           return (
                             <label key={idx} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-0.5 rounded transition-colors">
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={(e) => {
-                                  const val = subOpt.value;
+                                  const val = subOpt.value || slugifySubCategory(subOpt.label);
+                                  if (!val) return;
                                   setProductForm((prev) => {
-                                    const currentSubs = Array.isArray(prev.subCategory)
-                                      ? prev.subCategory
-                                      : (prev.subCategory ? [prev.subCategory] : []);
+                                    const currentSubs = subCategoryValues(prev.subCategory);
+                                    const already = hasSubCategoryOption(currentSubs, val, subOpt.label);
                                     const newSubs = e.target.checked
-                                      ? [...currentSubs, val]
-                                      : currentSubs.filter((s) => s !== val);
+                                      ? (already ? currentSubs : [...currentSubs, val])
+                                      : currentSubs.filter((s) => slugifySubCategory(s) !== slugifySubCategory(val) && slugifySubCategory(s) !== slugifySubCategory(subOpt.label));
                                     return { ...prev, subCategory: newSubs };
                                   });
                                 }}
@@ -2447,7 +2454,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 items-center">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -2478,6 +2485,25 @@ const AdminDashboard = () => {
                   />
                   <span className="text-sm text-gray-700">Featured</span>
                 </label>
+                <div className="flex items-center gap-2 sm:ml-auto">
+                  <button
+                    type="button"
+                    title={productForm.isActive === false ? 'Hidden from website' : 'Live on website'}
+                    onClick={() =>
+                      setProductForm((prev) => ({ ...prev, isActive: !(prev.isActive !== false) }))
+                    }
+                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
+                      productForm.isActive !== false ? 'bg-green-500' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                        productForm.isActive !== false ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm font-medium text-gray-800">Live on Site</span>
+                </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
@@ -2569,23 +2595,21 @@ const AdminDashboard = () => {
                       productSubCategoryOptionsFromNav.length > 0 ? (
                         <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-white">
                           {productSubCategoryOptionsFromNav.map((subOpt, idx) => {
-                            const isChecked = Array.isArray(productForm.subCategory)
-                              ? productForm.subCategory.includes(subOpt.value)
-                              : productForm.subCategory === subOpt.value;
+                            const isChecked = hasSubCategoryOption(productForm.subCategory, subOpt.value, subOpt.label);
                             return (
                               <label key={idx} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-0.5 rounded transition-colors">
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={(e) => {
-                                    const val = subOpt.value;
+                                    const val = subOpt.value || slugifySubCategory(subOpt.label);
+                                    if (!val) return;
                                     setProductForm((prev) => {
-                                      const currentSubs = Array.isArray(prev.subCategory)
-                                        ? prev.subCategory
-                                        : (prev.subCategory ? [prev.subCategory] : []);
+                                      const currentSubs = subCategoryValues(prev.subCategory);
+                                      const already = hasSubCategoryOption(currentSubs, val, subOpt.label);
                                       const newSubs = e.target.checked
-                                        ? [...currentSubs, val]
-                                        : currentSubs.filter((s) => s !== val);
+                                        ? (already ? currentSubs : [...currentSubs, val])
+                                        : currentSubs.filter((s) => slugifySubCategory(s) !== slugifySubCategory(val) && slugifySubCategory(s) !== slugifySubCategory(subOpt.label));
                                       return { ...prev, subCategory: newSubs };
                                     });
                                   }}
@@ -3042,7 +3066,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4 items-center">
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -3073,6 +3097,25 @@ const AdminDashboard = () => {
                     />
                     <span className="text-sm text-gray-700">Featured</span>
                   </label>
+                  <div className="flex items-center gap-2 sm:ml-auto">
+                    <button
+                      type="button"
+                      title={productForm.isActive === false ? 'Hidden from website' : 'Live on website'}
+                      onClick={() =>
+                        setProductForm((prev) => ({ ...prev, isActive: !(prev.isActive !== false) }))
+                      }
+                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
+                        productForm.isActive !== false ? 'bg-green-500' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                          productForm.isActive !== false ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <span className="text-sm font-medium text-gray-800">Live on Site</span>
+                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
