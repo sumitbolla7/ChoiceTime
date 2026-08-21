@@ -1,0 +1,20 @@
+---
+description: ChoiceTime stack, repo layout, hosting, and deploy split (Vercel vs EC2/PM2)
+alwaysApply: true
+---
+
+# ChoiceTime architecture
+
+E-commerce watch & fashion store. Pair-program against this layout; do not invent a different stack.
+
+- **Frontend**: React (Vite/CRA), vanilla CSS or Tailwind, in `/frontend`. Hosted on **Vercel**; deploys on `git push origin main`.
+- **Backend**: Node.js + Express in `/backend` (`/routes`, `/controllers`, `/models`, `/services`). API: `https://api.choicetime.in/api`. Hosted on **AWS EC2** `13.233.112.102` via **PM2**.
+- **Database**: MongoDB Atlas.
+- **Repo**: `sumitbolla7/ChoiceTime`, branch `main`.
+
+Storefront files include `CategoryPage.jsx`, `Navbar.jsx`, `Home.jsx`, `ProductCard.jsx`, `api.js`. Admin: `AdminDashboard.jsx`.
+
+## Deploy
+
+- Frontend-only: push `main` (Vercel).
+- Backend changes: after merge/push, `git pull` on EC2 then `pm2 restart all`. Do not assume Vercel restarts the API.

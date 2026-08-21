@@ -1,0 +1,24 @@
+---
+description: Multi-brand subCategory submit/filter rules and hiding isActive false products from the storefront
+globs: frontend/**/*.{js,jsx,ts,tsx}
+alwaysApply: false
+---
+
+# Subcategory (multi-brand) and live-on-site
+
+Products may belong to one or many brands (Fossil, Tissot, Movado, Patek Philippe, etc.).
+
+## Admin form (`AdminDashboard.jsx`)
+
+- Keep `subCategory` as an **array in local state**.
+- Submit a **clean string**: `"Fossil"` or comma-separated `"Fossil, Tissot"` for API backward compatibility. Do not submit only an array unless the API is updated everywhere.
+
+## Category filtering (`CategoryPage.jsx`)
+
+- Match brands with client-side substring: `pSub.includes(target)` so a multi-subcategory product appears under every selected brand.
+- Normalize `subCategory` (string vs array) before matching; do not assume it is always a string.
+
+## Live on site (`isActive`)
+
+- `isActive: false` must never appear in customer category listings or search.
+- `productsList` must filter `p.isActive !== false` so hidden items do not render.

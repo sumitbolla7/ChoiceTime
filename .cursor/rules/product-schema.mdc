@@ -1,0 +1,20 @@
+---
+description: Product and secondary-category Mongo schemas, Mixed subCategory, and admin field sync
+globs: backend/models/**/*.js,backend/controllers/**/*.js
+alwaysApply: false
+---
+
+# Product schemas
+
+Master model: `backend/models/Product.js`.
+
+- `subCategory`: `mongoose.Schema.Types.Mixed` — string **or** array of strings (e.g. `"Fossil, Tissot"` or `["Fossil", "Tissot"]`). Never change this to a strict String-only type.
+- `isActive`: boolean — `true` live, `false` hidden from store.
+- `price`: number (selling price).
+- `originalPrice`: number (MRP).
+- `discountPercent`: number 0–100.
+- `stock`: number.
+
+Secondary collections under `backend/models/product/`: `watch.model.js`, `watchNew.model.js`, `menModel.js`, `womenModel.js`, `accessory.model.js`, `lens.model.js`, `shoes.model.js`, `menTshirt.model.js`. All `subCategory` fields stay `Mixed`.
+
+When updating products in `admin.controller.js`, sync `isActive`, `price`, `stock`, and `subCategory` to **both** `Product` and every relevant secondary collection.

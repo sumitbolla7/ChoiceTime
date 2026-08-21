@@ -1,0 +1,13 @@
+---
+description: Commit and push ChoiceTime changes to GitHub without waiting for extra confirmation
+alwaysApply: true
+---
+
+# GitHub push
+
+When the user asks to save, update, or ship work, commit relevant files and **push to `origin` immediately**. Do not ask again whether to push.
+
+- Remote: `https://github.com/sumitbolla7/ChoiceTime.git`
+- Default branch: `main`
+- Never force-push `main`. Never skip hooks unless the user asks.
+- Do not commit secrets (`.env`, credentials).
