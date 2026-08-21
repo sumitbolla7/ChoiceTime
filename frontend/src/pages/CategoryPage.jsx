@@ -86,12 +86,17 @@ const CategoryPage = () => {
 
       const params = { limit: 1000 };
       if (slug) params.category = slug;
-      if (subCategoryParam) params.subCategory = subCategoryParam;
+      // Bypass backend regex restriction to support multi-subcategory products
+      // if (subCategoryParam) params.subCategory = subCategoryParam;
 
       const response = await productAPI.getProducts(slug, params);
 
       if (response && response.success) {
         let productsList = response.data.products || [];
+        
+        // Hide inactive products (Live on Site = off)
+        productsList = productsList.filter((p) => p.isActive !== false);
+
         if (subCategoryParam && productsList.length > 0) {
           productsList = productsList.filter((p) => {
             const pSub = String(p.subCategory || p.subcategory || '').toLowerCase();
