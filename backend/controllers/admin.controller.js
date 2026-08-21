@@ -7,6 +7,14 @@ import Review from '../models/Review.js';
 import ShippingReturnPolicy from '../models/ShippingReturnPolicy.js';
 import ReturnRequest from '../models/ReturnRequest.js';
 import Setting from '../models/Setting.js';
+import Watch from '../models/product/watch.model.js';
+import WatchNew from '../models/product/watchNew.model.js';
+import Men from '../models/product/menModel.js';
+import Women from '../models/product/womenModel.js';
+import Accessory from '../models/product/accessory.model.js';
+import Lens from '../models/product/lens.model.js';
+import Shoes from '../models/product/shoes.model.js';
+import MenTshirt from '../models/product/menTshirt.model.js';
 
 const sanitizeSubCategory = (sub) => {
   if (Array.isArray(sub)) {
@@ -288,10 +296,9 @@ export const updateProduct = async (req, res) => {
       ...(category !== undefined && { category: String(category).toLowerCase() }),
       ...(subCategory !== undefined && { subCategory: sanitizeSubCategory(subCategory) }),
       ...(productData.gender !== undefined && { gender: productData.gender }),
-      ...(productData.price !== undefined && { price }),
+      ...(productData.price !== undefined && { price, finalPrice: price }),
       ...(productData.originalPrice !== undefined && { originalPrice: originalPrice || price }),
       ...(productData.discountPercent !== undefined && { discountPercent: Number(productData.discountPercent) }),
-      finalPrice: price,
       ...(productData.stock !== undefined && { stock: stockNum }),
       ...(productData.images !== undefined && { images: imagesArr }),
       ...(productData.description !== undefined && { description: (productData.description || '').trim() }),
@@ -327,6 +334,24 @@ export const updateProduct = async (req, res) => {
         success: false,
         message: 'Product not found',
       });
+    }
+
+    // Sync update to secondary collections
+    try {
+      const syncFilter = { $or: [{ _id: req.params.id }, { name: product.name }, { title: product.name }] };
+      const syncUpdate = { $set: updatePayload };
+      await Promise.allSettled([
+        Watch.updateMany(syncFilter, syncUpdate),
+        WatchNew.updateMany(syncFilter, syncUpdate),
+        Men.updateMany(syncFilter, syncUpdate),
+        Women.updateMany(syncFilter, syncUpdate),
+        Accessory.updateMany(syncFilter, syncUpdate),
+        Lens.updateMany(syncFilter, syncUpdate),
+        Shoes.updateMany(syncFilter, syncUpdate),
+        MenTshirt.updateMany(syncFilter, syncUpdate),
+      ]);
+    } catch (syncErr) {
+      console.error('Secondary collections update sync error:', syncErr);
     }
     res.status(200).json({
       success: true,
@@ -388,6 +413,21 @@ export const deleteUser = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
+    try {
+      const syncFilter = { $or: [{ _id: req.params.id }] };
+      await Promise.allSettled([
+        Watch.deleteMany(syncFilter),
+        WatchNew.deleteMany(syncFilter),
+        Men.deleteMany(syncFilter),
+        Women.deleteMany(syncFilter),
+        Accessory.deleteMany(syncFilter),
+        Lens.deleteMany(syncFilter),
+        Shoes.deleteMany(syncFilter),
+        MenTshirt.deleteMany(syncFilter),
+      ]);
+    } catch (delErr) {
+      console.error('Secondary collections delete sync error:', delErr);
+    }
     if (!product) {
       return res.status(404).json({
         success: false,
