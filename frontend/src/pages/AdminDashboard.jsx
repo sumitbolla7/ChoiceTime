@@ -1287,6 +1287,7 @@ const AdminDashboard = () => {
       isNewArrival: product.isNewArrival || false,
       onSale: product.onSale || false,
       isFeatured: product.isFeatured || false,
+      isActive: product.isActive !== false,
       colorOptions: product.colorOptions?.join(', ') || '',
       boxOptions: product.boxOptions?.length > 0
         ? product.boxOptions.map((opt) =>
@@ -1336,6 +1337,7 @@ const AdminDashboard = () => {
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
+        isActive: Boolean(productForm.isActive !== false),
         colorOptions: productForm.colorOptions
           ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
           : [],
@@ -1397,6 +1399,7 @@ const AdminDashboard = () => {
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
+        isActive: Boolean(productForm.isActive !== false),
         colorOptions: productForm.colorOptions
           ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
           : [],
