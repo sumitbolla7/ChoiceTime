@@ -21,7 +21,7 @@ export const getProducts = async (req, res) => {
       }
     }
 
-    if (subCategory) query.subCategory = new RegExp(`^${String(subCategory).trim()}$`, 'i');
+    if (subCategory) query.subCategory = new RegExp(String(subCategory).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\if (subCategory) query.subCategory = new RegExp(`^${String(subCategory).trim()}$`, 'i');'), 'i');
     if (gender) query.gender = String(gender).toLowerCase().trim();
     // Hide products the admin has turned off, without deleting them
     query.isActive = { $ne: false };
