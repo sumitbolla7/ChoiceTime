@@ -94,12 +94,12 @@ const CategoryPage = () => {
         let productsList = response.data.products || [];
         if (subCategoryParam && productsList.length > 0) {
           productsList = productsList.filter((p) => {
-            const pSub = p.subCategory || p.subcategory || '';
+            const pSub = String(p.subCategory || p.subcategory || '').toLowerCase();
             const target = subCategoryParam.toLowerCase().trim();
-            if (Array.isArray(pSub)) {
-              return pSub.some(s => String(s).toLowerCase().trim() === target);
+            if (Array.isArray(p.subCategory)) {
+              return p.subCategory.some(s => String(s).toLowerCase().trim() === target);
             }
-            return String(pSub).toLowerCase().trim() === target;
+            return pSub.includes(target);
           });
         }
         setAllProducts(productsList);
