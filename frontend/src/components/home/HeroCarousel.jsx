@@ -1,18 +1,16 @@
 import { Link } from 'react-router-dom';
 
-const DESKTOP_BANNER = 'https://ik.imagekit.io/l6od6mlo3j/static/pcbanner.png';
-const MOBILE_BANNER = 'https://ik.imagekit.io/l6od6mlo3j/static/phone%20banner.png';
+const RAKSHA_BANDHAN_BANNER = 'https://ik.imagekit.io/pyd0fawt1/raksha%20bandan%20sale%20banner.jpeg';
 
 const HeroCarousel = () => (
-  <div className="relative w-full overflow-hidden pt-24 md:pt-52">
+  <div className="relative w-full overflow-hidden pt-0 md:pt-0">
     <Link to="/" className="block">
       <picture>
-        <source media="(max-width: 767px)" srcSet={MOBILE_BANNER} />
+        <source media="(max-width: 767px)" srcSet={RAKSHA_BANDHAN_BANNER} />
         <img
-          src={DESKTOP_BANNER}
-          alt="Banner"
+          src={RAKSHA_BANDHAN_BANNER}
+          alt="Raksha Bandhan Sale Banner"
           className="w-full h-auto object-cover block select-none"
-          style={{ maxHeight: '30vh' }}
           draggable={false}
           loading="eager"
           fetchPriority="high"
