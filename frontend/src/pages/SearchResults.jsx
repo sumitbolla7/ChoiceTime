@@ -226,7 +226,7 @@ const SearchResults = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Header */}
-            <div className="sticky top-0 flex items-center justify-between p-4 bg-white border-b border-gray-100 z-10">
+            <div className="sticky top-[95px] md:top-[105px] flex items-center justify-between p-4 bg-white border-b border-gray-100 z-10">
               <h2 className="text-lg font-bold text-gray-900">Filters</h2>
               <button
                 onClick={() => setShowMobileFilters(false)}
