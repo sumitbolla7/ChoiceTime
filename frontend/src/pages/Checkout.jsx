@@ -531,7 +531,7 @@ const Checkout = () => {
       }}
     >
       {/* Professional Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm overflow-x-hidden">
+      <div className="bg-white border-b border-gray-200 z-10 shadow-sm overflow-x-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
             <h1 className="text-lg font-semibold text-gray-900 truncate">Checkout</h1>
@@ -938,7 +938,7 @@ const Checkout = () => {
 
           {/* Right Column - Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:sticky lg:top-24 overflow-hidden">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:sticky lg:top-32 overflow-hidden">
               <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
                 <h2 className="text-base font-semibold text-gray-900">Order Summary</h2>
               </div>
