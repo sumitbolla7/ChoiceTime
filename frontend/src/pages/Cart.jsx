@@ -192,7 +192,7 @@ const Cart = () => {
     <div className="min-h-screen bg-brown-50 font-sans text-brown-800 pb-20">
 
       {/* Professional Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+      <div className="bg-white border-b border-gray-200 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
             <IconArrowLeft className="w-4 h-4 mr-1.5" />
@@ -354,7 +354,7 @@ const Cart = () => {
 
           {/* --- Professional RIGHT COLUMN: Summary --- */}
           <div className="lg:col-span-4 mt-8 lg:mt-0">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sticky top-20">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lg:sticky lg:top-32">
               <h2 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">Order Summary</h2>
 
               <dl className="space-y-3.5 text-sm">
