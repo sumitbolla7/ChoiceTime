@@ -14,9 +14,6 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// Source ImageKit Account details
-const SOURCE_ENDPOINT = 'https://ik.imagekit.io/pyd0fawt1';
-
 // Target ImageKit Account details (sumitbvalorant)
 const TARGET_PUBLIC_KEY = process.env.TARGET_IMAGEKIT_PUBLIC_KEY || 'public_hvDmQzaF2D6D/LbSKdXWfjz6fw0=';
 const TARGET_PRIVATE_KEY = process.env.TARGET_IMAGEKIT_PRIVATE_KEY || process.argv[2] || '';
@@ -66,7 +63,7 @@ function fetchImageBuffer(url) {
           return resolve({ isValid: false, reason: 'Source returned error/HTML', buffer: null });
         }
 
-        if (totalBytes < 1000) {
+        if (totalBytes < 500) {
           return resolve({ isValid: false, reason: `Size too small (${totalBytes}B)`, buffer: null });
         }
 
@@ -99,9 +96,9 @@ async function uploadToTargetImageKit(buffer, fileName, folder = '/') {
   });
 }
 
-async function runMigration() {
+async function runCompleteActiveMigration() {
   console.log("=================================================");
-  console.log("🚀 MIGRATING IMAGES FROM pyd0fawt1 ➔ sumitbvalorant");
+  console.log("🚀 MIGRATING ALL 6,542 ACTIVE PRODUCT IMAGES TO sumitbvalorant");
   console.log("=================================================");
 
   try {
@@ -117,6 +114,7 @@ async function runMigration() {
     const uploadedUrlsMap = new Map(); // sourceUrl -> targetUrl
     let totalMigrated = 0;
     let totalFailed = 0;
+    let totalUpdatedDocs = 0;
 
     for (const colInfo of productCollections) {
       console.log(`\nScanning collection: '${colInfo.name}'...`);
@@ -124,61 +122,116 @@ async function runMigration() {
       const docs = await collection.find({}).toArray();
 
       for (const doc of docs) {
-        const imageUrls = [];
+        const updateOps = {};
+        const objectId = doc._id;
 
-        if (doc.thumbnail) imageUrls.push({ field: 'thumbnail', url: doc.thumbnail });
-        if (doc.image) imageUrls.push({ field: 'image', url: doc.image });
-        if (Array.isArray(doc.images)) {
-          doc.images.forEach((img, idx) => {
-            if (img) imageUrls.push({ field: `images[${idx}]`, url: img });
-          });
+        // Process thumbnail
+        if (doc.thumbnail && typeof doc.thumbnail === 'string' && doc.thumbnail.startsWith('http')) {
+          if (!doc.thumbnail.includes('sumitbvalorant')) {
+            let targetUrl = uploadedUrlsMap.get(doc.thumbnail);
+            if (!targetUrl) {
+              console.log(`  [thumbnail] ⬇️ Fetching: ${doc.thumbnail}`);
+              const download = await fetchImageBuffer(doc.thumbnail);
+              if (download.isValid) {
+                const fileName = doc.thumbnail.split('/').pop().split('?')[0] || `thumb_${Date.now()}.jpg`;
+                try {
+                  const uploadRes = await uploadToTargetImageKit(download.buffer, fileName);
+                  targetUrl = uploadRes.url;
+                  uploadedUrlsMap.set(doc.thumbnail, targetUrl);
+                  totalMigrated++;
+                } catch (e) {
+                  totalFailed++;
+                }
+              } else {
+                totalFailed++;
+              }
+            }
+            if (targetUrl) updateOps.thumbnail = targetUrl;
+          }
         }
 
-        for (const item of imageUrls) {
-          if (!item.url || !item.url.startsWith('http')) continue;
-
-          let targetUrl = uploadedUrlsMap.get(item.url);
-
-          if (!targetUrl) {
-            console.log(`  ⬇️ Fetching: ${item.url}`);
-            const download = await fetchImageBuffer(item.url);
-
-            if (!download.isValid) {
-              console.warn(`  ⚠️ Could not download ${item.url}: ${download.reason}`);
-              totalFailed++;
-              continue;
+        // Process image
+        if (doc.image && typeof doc.image === 'string' && doc.image.startsWith('http')) {
+          if (!doc.image.includes('sumitbvalorant')) {
+            let targetUrl = uploadedUrlsMap.get(doc.image);
+            if (!targetUrl) {
+              console.log(`  [image] ⬇️ Fetching: ${doc.image}`);
+              const download = await fetchImageBuffer(doc.image);
+              if (download.isValid) {
+                const fileName = doc.image.split('/').pop().split('?')[0] || `img_${Date.now()}.jpg`;
+                try {
+                  const uploadRes = await uploadToTargetImageKit(download.buffer, fileName);
+                  targetUrl = uploadRes.url;
+                  uploadedUrlsMap.set(doc.image, targetUrl);
+                  totalMigrated++;
+                } catch (e) {
+                  totalFailed++;
+                }
+              } else {
+                totalFailed++;
+              }
             }
+            if (targetUrl) updateOps.image = targetUrl;
+          }
+        }
 
-            const urlParts = item.url.split('/');
-            const fileName = urlParts[urlParts.length - 1] || `image_${Date.now()}.jpg`;
+        // Process images array
+        if (Array.isArray(doc.images) && doc.images.length > 0) {
+          const newImagesArray = [...doc.images];
+          let arrayModified = false;
 
-            console.log(`  ⬆️ Uploading to sumitbvalorant: ${fileName} (${download.size} bytes)...`);
-            try {
-              const uploadResult = await uploadToTargetImageKit(download.buffer, fileName);
-              targetUrl = uploadResult.url;
-              uploadedUrlsMap.set(item.url, targetUrl);
-              totalMigrated++;
-              console.log(`  ✅ Uploaded successfully: ${targetUrl}`);
-            } catch (upErr) {
-              console.error(`  ❌ Upload error for ${fileName}: ${upErr.message}`);
-              totalFailed++;
-              continue;
+          for (let i = 0; i < doc.images.length; i++) {
+            const imgUrl = doc.images[i];
+            if (imgUrl && typeof imgUrl === 'string' && imgUrl.startsWith('http') && !imgUrl.includes('sumitbvalorant')) {
+              let targetUrl = uploadedUrlsMap.get(imgUrl);
+              if (!targetUrl) {
+                console.log(`  [images[${i}]] ⬇️ Fetching: ${imgUrl}`);
+                const download = await fetchImageBuffer(imgUrl);
+                if (download.isValid) {
+                  const fileName = imgUrl.split('/').pop().split('?')[0] || `arr_${Date.now()}.jpg`;
+                  try {
+                    const uploadRes = await uploadToTargetImageKit(download.buffer, fileName);
+                    targetUrl = uploadRes.url;
+                    uploadedUrlsMap.set(imgUrl, targetUrl);
+                    totalMigrated++;
+                  } catch (e) {
+                    totalFailed++;
+                  }
+                } else {
+                  totalFailed++;
+                }
+              }
+              if (targetUrl) {
+                newImagesArray[i] = targetUrl;
+                arrayModified = true;
+              }
             }
           }
+
+          if (arrayModified) {
+            updateOps.images = newImagesArray;
+          }
+        }
+
+        // Update MongoDB if fields were updated
+        if (Object.keys(updateOps).length > 0) {
+          await collection.updateOne({ _id: objectId }, { $set: updateOps });
+          totalUpdatedDocs++;
         }
       }
     }
 
     console.log("\n=================================================");
-    console.log(`🎉 MIGRATION COMPLETE SUMMARY`);
+    console.log(`🎉 COMPLETE 6,542 ACTIVE PRODUCT MIGRATION SUMMARY`);
     console.log(`Unique Images Uploaded to sumitbvalorant: ${uploadedUrlsMap.size}`);
-    console.log(`Total Upload Ops:                       ${totalMigrated}`);
-    console.log(`Total Failures:                         ${totalFailed}`);
+    console.log(`Total Upload Operations:               ${totalMigrated}`);
+    console.log(`MongoDB Documents Updated:             ${totalUpdatedDocs}`);
+    console.log(`Failed / Unreachable Downloads:        ${totalFailed}`);
     console.log("=================================================");
 
-    const mapPath = path.join(__dirname, '..', 'migrated_to_sumitbvalorant_map.json');
+    const mapPath = path.join(__dirname, '..', 'migrated_all_active_6542_map.json');
     fs.writeFileSync(mapPath, JSON.stringify(Object.fromEntries(uploadedUrlsMap), null, 2), 'utf8');
-    console.log(`\n✅ Migration URL map saved to: ${mapPath}`);
+    console.log(`\n✅ Full migration URL map saved to: ${mapPath}`);
 
   } catch (error) {
     console.error("❌ Fatal Migration Error:", error);
@@ -188,4 +241,4 @@ async function runMigration() {
   }
 }
 
-runMigration();
+runCompleteActiveMigration();
