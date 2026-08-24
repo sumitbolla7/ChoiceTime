@@ -4,7 +4,14 @@ export const getPlaceholderImage = (width = 400, height = 400) => {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 };
 
-// Multi-tier automatic CDN fallback: Primary ImageKit -> Secondary ImageKit -> Cloudinary -> SVG
+/**
+ * 4-Tier Automatic Image CDN Failover:
+ * Tier 1: pyd0fawt1 (Primary ImageKit)
+ * Tier 2: sumitbvalorant (Secondary ImageKit)
+ * Tier 3: l6od6mlo3j (Legacy ImageKit)
+ * Tier 4: Cloudinary (dndqnoxqg)
+ * Final: SVG Placeholder
+ */
 export const handleImageError = (e, width = 400, height = 400) => {
   const currentSrc = e.target?.src || '';
 
@@ -13,13 +20,19 @@ export const handleImageError = (e, width = 400, height = 400) => {
     return;
   }
 
-  // Tier 1: If primary ImageKit account (pyd0fawt1) fails/hits limit, fallback to secondary account (l6od6mlo3j)
+  // Tier 1 -> Tier 2: If pyd0fawt1 fails / limit reached, switch to sumitbvalorant
   if (currentSrc.includes('ik.imagekit.io/pyd0fawt1')) {
-    e.target.src = currentSrc.replace('ik.imagekit.io/pyd0fawt1', 'ik.imagekit.io/l6od6mlo3j');
+    e.target.src = currentSrc.replace('ik.imagekit.io/pyd0fawt1', 'ik.imagekit.io/sumitbvalorant');
     return;
   }
 
-  // Tier 2: If secondary ImageKit account fails, try Cloudinary backup
+  // Tier 2 -> Tier 3: If sumitbvalorant fails, switch to l6od6mlo3j
+  if (currentSrc.includes('ik.imagekit.io/sumitbvalorant')) {
+    e.target.src = currentSrc.replace('ik.imagekit.io/sumitbvalorant', 'ik.imagekit.io/l6od6mlo3j');
+    return;
+  }
+
+  // Tier 3 -> Tier 4: If l6od6mlo3j fails, try Cloudinary backup
   if (currentSrc.includes('ik.imagekit.io/l6od6mlo3j')) {
     const urlParts = currentSrc.split('/');
     const fileName = urlParts[urlParts.length - 1] || '';
@@ -30,7 +43,7 @@ export const handleImageError = (e, width = 400, height = 400) => {
     }
   }
 
-  // Tier 3: SVG "No Image" placeholder
+  // Final: SVG "No Image" placeholder
   e.target.onerror = null;
   e.target.src = getPlaceholderImage(width, height);
 };
