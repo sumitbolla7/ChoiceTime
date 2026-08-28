@@ -33,6 +33,11 @@ const productSchema = new mongoose.Schema(
 
     color: String,
     colorOptions: [{ type: String }],
+    colorVariants: [{
+      color: { type: String, trim: true },
+      image: { type: String, trim: true },
+      images: [{ type: String }],
+    }],
     boxOptions: [{
       name: { type: String, required: true },
       price: { type: Number, default: 0 },
