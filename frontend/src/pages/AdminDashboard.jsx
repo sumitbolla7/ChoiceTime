@@ -158,6 +158,7 @@ const AdminDashboard = () => {
     quality: '',
     warranty: '',
     colorOptions: '',
+    colorVariants: [],
     boxOptions: [{ name: '', price: '' }],
     pageNumberAll: '',
     pageNumberCategory: '',
@@ -4083,6 +4084,11 @@ const AdminDashboard = () => {
                                       <span>Qty: {item.quantity}</span>
                                       <span>₹{item.price?.toLocaleString() || '0'} each</span>
                                       <span>Size: {item.size || item.selectedSize || 'N/A'}</span>
+                                      {(item.color || item.selectedColor) && (
+                                        <span className="inline-flex items-center gap-1 font-bold text-xs bg-purple-100 text-purple-900 border border-purple-300 px-2 py-0.5 rounded-md shadow-sm">
+                                          🎨 Color: {item.color || item.selectedColor}
+                                        </span>
+                                      )}
                                       {item.boxType && <span>Box: {item.boxType}</span>}
                                     </div>
                                   </div>
