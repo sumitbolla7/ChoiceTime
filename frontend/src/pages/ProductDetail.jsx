@@ -677,7 +677,7 @@ const ProductDetail = () => {
                             type="button"
                             onClick={() => {
                               setSelectedColor(colorName);
-                              setSelectedImageIndex(0); // Instantly switch main image to this color watch!
+                              setSelectedImageIndex(0);
                             }}
                             className={`relative px-3 py-1.5 rounded-lg border-2 transition-all duration-200 flex items-center gap-2 text-xs shadow-sm ${
                               isSelected
@@ -703,52 +703,6 @@ const ProductDetail = () => {
                         );
                       });
                     })()}
-                  </div>
-                </div>
-              )}{1,2}$/i.test(color) || /^(rgb|hsl)/i.test(color);
-                      
-                      if (isHexColor) {
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => setSelectedColor(color)}
-                            className={`relative w-8 h-8 rounded-full border-2 transition-all ${isSelected ? 'border-gray-900 scale-110 shadow-md' : 'border-gray-300 hover:border-gray-500'}`}
-                            style={{ backgroundColor: color }}
-                            aria-label={`Select color ${color}`}
-                          >
-                            {isSelected && (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <svg className="w-4 h-4 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                              </div>
-                            )}
-                          </button>
-                        );
-                      }
-
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedColor(color)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-medium transition-all ${
-                            isSelected
-                              ? 'border-gray-900 bg-gray-900 text-white shadow-sm'
-                              : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
-                          }`}
-                        >
-                          <svg className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                          </svg>
-                          {color}
-                          {isSelected && (
-                            <svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
               )}
