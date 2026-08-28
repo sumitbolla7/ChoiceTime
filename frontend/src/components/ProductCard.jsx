@@ -42,7 +42,8 @@ const ProductCard = ({ product }) => {
       (product.images && product.images.image1) ||
       (product.images && product.images.image2) ||
       (product.images && product.images.image3) ||
-      (product.images && product.images.image4);
+      (product.images && product.images.image4) ||
+      (Array.isArray(product.colorVariants) && product.colorVariants.find(v => v && typeof v === 'object' && v.image)?.image);
     if (fallbackImage && typeof fallbackImage === 'string' && fallbackImage.trim() !== '') {
       productImages = [fallbackImage.trim()];
     }
