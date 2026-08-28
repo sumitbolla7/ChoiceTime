@@ -25,7 +25,7 @@ const ProductDetail = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loadingRelatedProducts, setLoadingRelatedProducts] = useState(false);
 
-  // Review states
+  /* Review states */
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -87,11 +87,11 @@ const ProductDetail = () => {
       const validCategories = ['men', 'women', 'watches', 'lens', 'accessories'];
       let foundData = null;
 
-      // Try to fetch with the provided category first
+      /* Try to fetch with the provided category first */
       if (category && category !== 'undefined') {
         const apiCategory = normalizeCategory(category);
         try {
-          // Use the appropriate API method based on category
+          /* Use the appropriate API method based on category */
           switch (apiCategory) {
             case 'watches':
               foundData = await productAPI.getWatchById(id);
@@ -109,7 +109,7 @@ const ProductDetail = () => {
               foundData = await productAPI.getWomenItemById(id);
               break;
             default:
-              // Try as generic fetch if category doesn't match
+              /* Try as generic fetch if category doesn't match */
               break;
           }
         } catch (err) {
@@ -117,7 +117,7 @@ const ProductDetail = () => {
         }
       }
 
-      // If not found, try all categories
+      /* If not found, try all categories */
       if (!foundData || !foundData.success) {
         for (const cat of validCategories) {
           try {
@@ -142,7 +142,7 @@ const ProductDetail = () => {
               break;
             }
           } catch {
-            // continue to next category
+            /* continue to next category */
             continue;
           }
         }
@@ -152,12 +152,12 @@ const ProductDetail = () => {
         const loadedProduct = foundData.data.product;
         setProduct(loadedProduct);
         if (loadedProduct.sizes?.length > 0) setSelectedSize(loadedProduct.sizes[0]);
-        if (loadedProduct.colorVariants?.length > 0) {
+        if (loadedProduct?.colorVariants?.length > 0) {
           const first = loadedProduct.colorVariants[0];
           setSelectedColor(typeof first === 'string' ? first : (first.color || ''));
-        } else if (loadedProduct.colorOptions?.length > 0) {
+        } else if (loadedProduct?.colorOptions?.length > 0) {
           setSelectedColor(loadedProduct.colorOptions[0]);
-        } else if (loadedProduct.colors?.length > 0) {
+        } else if (loadedProduct?.colors?.length > 0) {
           setSelectedColor(loadedProduct.colors[0]);
         }
         if (loadedProduct.boxOptions?.length > 0) {
@@ -203,7 +203,7 @@ const ProductDetail = () => {
     }
   };
 
-  // Fetch reviews for the product
+  /* Fetch reviews for the product */
   const fetchReviews = async (currentProduct) => {
     if (!currentProduct) return;
 
@@ -225,7 +225,7 @@ const ProductDetail = () => {
     }
   };
 
-  // Handle review sort change
+  /* Handle review sort change */
   const handleReviewSortChange = (newSort) => {
     setReviewSort(newSort);
     if (product) {
@@ -240,7 +240,7 @@ const ProductDetail = () => {
     }
   };
 
-  // Handle review form submission
+  /* Handle review form submission */
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
 
@@ -267,10 +267,10 @@ const ProductDetail = () => {
       });
 
       if (response.success) {
-        // Reset form
+        /* Reset form */
         setReviewForm({ rating: 0, comment: '' });
         setShowReviewForm(false);
-        // Refresh reviews
+        /* Refresh reviews */
         await fetchReviews(product);
         alert('Review submitted successfully!');
       }
@@ -282,7 +282,7 @@ const ProductDetail = () => {
     }
   };
 
-  // Mark review as helpful
+  /* Mark review as helpful */
   const handleMarkHelpful = async (reviewId) => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
@@ -292,7 +292,7 @@ const ProductDetail = () => {
     try {
       const response = await reviewAPI.markHelpful(reviewId);
       if (response.success) {
-        // Update the review in the list
+        /* Update the review in the list */
         setReviews(prevReviews =>
           prevReviews.map(review =>
             review._id === reviewId
@@ -334,7 +334,7 @@ const ProductDetail = () => {
         setTimeout(() => setShareCopied(false), 2000);
       }
     } catch (error) {
-      // User cancelled share or error - try clipboard fallback
+      /* User cancelled share or error - try clipboard fallback */
       if (error.name !== 'AbortError') {
         try {
           await navigator.clipboard.writeText(window.location.href);
@@ -347,7 +347,7 @@ const ProductDetail = () => {
     }
   };
 
-  // Get the price of the currently selected box option
+  /* Get the price of the currently selected box option */
   const getSelectedBoxPrice = () => {
     if (!selectedBoxType || !product?.boxOptions?.length) return 0;
     const found = product.boxOptions.find((opt) =>
@@ -400,9 +400,9 @@ const ProductDetail = () => {
     .map(v => typeof v === 'object' ? v.image : null)
     .filter(img => img && typeof img === 'string' && img.trim() !== '');
 
-  let mainImages = Array.isArray(product?.images) && product?.images.length > 0
-    ? product?.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
-    : (product.image || product.thumbnail ? [product.image || product.thumbnail] : []);
+  let mainImages = Array.isArray(product?.images) && product.images.length > 0
+    ? product.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
+    : (product?.image || product?.thumbnail ? [product.image || product.thumbnail] : []);
 
   if (mainImages.length === 0 && colorVariantImages.length > 0) {
     mainImages = colorVariantImages;
@@ -420,7 +420,7 @@ const ProductDetail = () => {
   const originalPrice = product.originalPrice || product.mrp || 0;
   const alreadyInCart = isProductInCart(product._id || product.id);
 
-  // Split product name for highlighting
+  /* Split product name for highlighting */
   const nameWords = product.name.split(' ');
   const highlightWords = ['black', 'strap', 'steel', 'pro', 'sport'];
 
@@ -659,7 +659,7 @@ const ProductDetail = () => {
               </div>
 
               {/* Color Selection */}
-              {(product?.colorVariants?.length > 0 || product?.colorOptions?.length > 0 || product.colors?.length > 0 || product.color) && (
+              {(product?.colorVariants?.length > 0 || product?.colorOptions?.length > 0 || product?.colors?.length > 0 || product?.color) && (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs sm:text-sm font-medium text-gray-900">Select Color Variant</label>
@@ -672,7 +672,7 @@ const ProductDetail = () => {
                   <div className="flex flex-wrap gap-2">
                     {(() => {
                       const variantList = (product?.colorVariants || []).map(v => typeof v === 'string' ? { color: v } : v);
-                      const optionList = (product?.colorOptions || product.colors || [product.color]).filter(Boolean).map(c => typeof c === 'string' ? { color: c } : c);
+                      const optionList = (product?.colorOptions || product?.colors || [product?.color]).filter(Boolean).map(c => typeof c === 'string' ? { color: c } : c);
                       const merged = [...variantList];
                       optionList.forEach(opt => {
                         if (!merged.some(m => m.color?.toLowerCase() === opt.color?.toLowerCase())) {
@@ -928,7 +928,7 @@ const ProductDetail = () => {
 
               {/* {(product.category || '').toLowerCase().includes('belt') ? 'Belt Specifications' : (product.category || '').toLowerCase().includes('wallet') ? 'Wallet Specifications' : (product.category || '').toLowerCase().includes('sunglass') ? 'Sunglass Specifications' : '{(product.category || '').toLowerCase().includes('belt') ? 'Belt Specifications' : (product.category || '').toLowerCase().includes('wallet') ? 'Wallet Specifications' : (product.category || '').toLowerCase().includes('sunglass') ? 'Sunglass Specifications' : 'Watch Specifications'}'} - Only show if any watch field exists */}
               {(() => {
-                // Check for watch-specific fields (support both naming conventions)
+                /* Check for watch-specific fields (support both naming conventions) */
                 const specs = [
                   { label: 'Model', value: product.model || product.productDetails?.modelNumber },
                   { label: 'Functions', value: product.functions || product.productDetails?.function },
