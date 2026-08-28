@@ -320,8 +320,8 @@ const ProductDetail = () => {
 
   const handleShareProduct = async () => {
     const shareData = {
-      title: product.name,
-      text: `Check out ${product.name}${product.brand ? ` by ${product.brand}` : ''} - ₹${product.salePrice || product.price}`,
+      title: (product?.name || 'Product'),
+      text: `Check out ${(product?.name || 'Product')}${product.brand ? ` by ${product.brand}` : ''} - ₹${product.salePrice || (product?.price || 0)}`,
       url: window.location.href,
     };
 
@@ -350,7 +350,7 @@ const ProductDetail = () => {
   /* Get the price of the currently selected box option */
   const getSelectedBoxPrice = () => {
     if (!selectedBoxType || !product?.boxOptions?.length) return 0;
-    const found = product.boxOptions.find((opt) =>
+    const found = (product?.boxOptions || []).find((opt) =>
       typeof opt === 'string' ? opt === selectedBoxType : opt.name === selectedBoxType
     );
     if (!found || typeof found === 'string') return 0;
@@ -416,12 +416,12 @@ const ProductDetail = () => {
   if (productImages.length === 0) {
     productImages = [getPlaceholderImage(400, 400)];
   }
-  const finalPrice = product.price || product.finalPrice;
-  const originalPrice = product.originalPrice || product.mrp || 0;
+  const finalPrice = (product?.price || 0) || (product?.finalPrice || 0);
+  const originalPrice = (product?.originalPrice || 0) || product.mrp || 0;
   const alreadyInCart = isProductInCart(product._id || product.id);
 
   /* Split product name for highlighting */
-  const nameWords = product.name.split(' ');
+  const nameWords = (product?.name || 'Product').split(' ');
   const highlightWords = ['black', 'strap', 'steel', 'pro', 'sport'];
 
   return (
@@ -465,7 +465,7 @@ const ProductDetail = () => {
                       >
                         <img
                           src={img}
-                          alt={`${product.name} ${idx + 1}`}
+                          alt={`${(product?.name || 'Product')} ${idx + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => handleImageError(e, 100, 100)}
                         />
@@ -546,7 +546,7 @@ const ProductDetail = () => {
 
                   <img
                     src={productImages[selectedImageIndex]}
-                    alt={product.name}
+                    alt={(product?.name || 'Product')}
                     className="w-full h-full object-cover"
                     onError={(e) => handleImageError(e, 600, 600)}
                   />
@@ -572,7 +572,7 @@ const ProductDetail = () => {
                       >
                         <img
                           src={img}
-                          alt={`${product.name} ${idx + 1}`}
+                          alt={`${(product?.name || 'Product')} ${idx + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => handleImageError(e, 80, 80)}
                         />
