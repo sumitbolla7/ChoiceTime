@@ -152,8 +152,14 @@ const ProductDetail = () => {
         const loadedProduct = foundData.data.product;
         setProduct(loadedProduct);
         if (loadedProduct.sizes?.length > 0) setSelectedSize(loadedProduct.sizes[0]);
-        if (loadedProduct.colorOptions?.length > 0) setSelectedColor(loadedProduct.colorOptions[0]);
-        else if (loadedProduct.colors?.length > 0) setSelectedColor(loadedProduct.colors[0]);
+        if (loadedProduct.colorVariants?.length > 0) {
+          const first = loadedProduct.colorVariants[0];
+          setSelectedColor(typeof first === 'string' ? first : (first.color || ''));
+        } else if (loadedProduct.colorOptions?.length > 0) {
+          setSelectedColor(loadedProduct.colorOptions[0]);
+        } else if (loadedProduct.colors?.length > 0) {
+          setSelectedColor(loadedProduct.colors[0]);
+        }
         if (loadedProduct.boxOptions?.length > 0) {
           const firstBox = loadedProduct.boxOptions[0];
           setSelectedBoxType(typeof firstBox === 'string' ? firstBox : firstBox.name);
@@ -377,7 +383,13 @@ const ProductDetail = () => {
   };
 
   const handlePrevImage = () => {
-    const productImages = product.images || [product.image || product.thumbnail];
+    const activeColorVariant = (product.colorVariants || []).find(
+    (v) => typeof v === 'object' && v.color && selectedColor && v.color.toLowerCase() === selectedColor.toLowerCase()
+  );
+  let productImages = product.images || [product.image || product.thumbnail];
+  if (activeColorVariant && activeColorVariant.image) {
+    productImages = [activeColorVariant.image, ...productImages.filter(img => img !== activeColorVariant.image)];
+  }
     setSelectedImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
   };
 
@@ -633,13 +645,67 @@ const ProductDetail = () => {
               </div>
 
               {/* Color Selection */}
-              {(product.colorOptions?.length > 0 || product.colors?.length > 0 || product.color) && (
+              {(product.colorVariants?.length > 0 || product.colorOptions?.length > 0 || product.colors?.length > 0 || product.color) && (
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-1.5">Select Color</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(product.colorOptions || product.colors || [product.color]).filter(Boolean).map((color, idx) => {
-                      const isSelected = selectedColor === color || (!selectedColor && idx === 0);
-                      const isHexColor = /^#([0-9A-F]{3}){1,2}$/i.test(color) || /^(rgb|hsl)/i.test(color);
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-900">Select Color Variant</label>
+                    {selectedColor && (
+                      <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                        {selectedColor}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      const variantList = (product.colorVariants || []).map(v => typeof v === 'string' ? { color: v } : v);
+                      const optionList = (product.colorOptions || product.colors || [product.color]).filter(Boolean).map(c => typeof c === 'string' ? { color: c } : c);
+                      const merged = [...variantList];
+                      optionList.forEach(opt => {
+                        if (!merged.some(m => m.color?.toLowerCase() === opt.color?.toLowerCase())) {
+                          merged.push(opt);
+                        }
+                      });
+
+                      return merged.map((variant, idx) => {
+                        const colorName = variant.color || 'Default';
+                        const isSelected = selectedColor?.toLowerCase() === colorName.toLowerCase() || (!selectedColor && idx === 0);
+                        const variantImg = variant.image;
+
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setSelectedColor(colorName);
+                              setSelectedImageIndex(0); // Instantly switch main image to this color watch!
+                            }}
+                            className={`relative px-3 py-1.5 rounded-lg border-2 transition-all duration-200 flex items-center gap-2 text-xs shadow-sm ${
+                              isSelected
+                                ? 'border-gray-900 bg-gray-900 text-white font-bold ring-2 ring-gray-900/20 scale-105'
+                                : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400 hover:bg-gray-50'
+                            }`}
+                          >
+                            {variantImg && (
+                              <img
+                                src={variantImg}
+                                alt={colorName}
+                                className="w-5 h-5 object-cover rounded-full border border-gray-300 flex-shrink-0"
+                                onError={(e) => handleImageError(e, 20, 20)}
+                              />
+                            )}
+                            <span className="font-semibold">{colorName}</span>
+                            {isSelected && (
+                              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}{1,2}$/i.test(color) || /^(rgb|hsl)/i.test(color);
                       
                       if (isHexColor) {
                         return (
