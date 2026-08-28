@@ -393,15 +393,15 @@ const ProductDetail = () => {
   if (loading) return <LoadingState />;
   if (!product) return <NotFoundState />;
 
-  const activeColorVariant = (product.colorVariants || []).find(
+  const activeColorVariant = (product?.colorVariants || []).find(
     (v) => typeof v === 'object' && v && v.color && selectedColor && v.color.toLowerCase() === selectedColor.toLowerCase()
   );
-  const colorVariantImages = (product.colorVariants || [])
+  const colorVariantImages = (product?.colorVariants || [])
     .map(v => typeof v === 'object' ? v.image : null)
     .filter(img => img && typeof img === 'string' && img.trim() !== '');
 
-  let mainImages = Array.isArray(product.images) && product.images.length > 0
-    ? product.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
+  let mainImages = Array.isArray(product?.images) && product?.images.length > 0
+    ? product?.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
     : (product.image || product.thumbnail ? [product.image || product.thumbnail] : []);
 
   if (mainImages.length === 0 && colorVariantImages.length > 0) {
@@ -659,7 +659,7 @@ const ProductDetail = () => {
               </div>
 
               {/* Color Selection */}
-              {(product.colorVariants?.length > 0 || product.colorOptions?.length > 0 || product.colors?.length > 0 || product.color) && (
+              {(product?.colorVariants?.length > 0 || product?.colorOptions?.length > 0 || product.colors?.length > 0 || product.color) && (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs sm:text-sm font-medium text-gray-900">Select Color Variant</label>
@@ -671,8 +671,8 @@ const ProductDetail = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(() => {
-                      const variantList = (product.colorVariants || []).map(v => typeof v === 'string' ? { color: v } : v);
-                      const optionList = (product.colorOptions || product.colors || [product.color]).filter(Boolean).map(c => typeof c === 'string' ? { color: c } : c);
+                      const variantList = (product?.colorVariants || []).map(v => typeof v === 'string' ? { color: v } : v);
+                      const optionList = (product?.colorOptions || product.colors || [product.color]).filter(Boolean).map(c => typeof c === 'string' ? { color: c } : c);
                       const merged = [...variantList];
                       optionList.forEach(opt => {
                         if (!merged.some(m => m.color?.toLowerCase() === opt.color?.toLowerCase())) {
