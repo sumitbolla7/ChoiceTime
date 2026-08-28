@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
 
 const categories = [
-  { label: "Men's Watches", path: '/mens-watches', image: 'https://ik.imagekit.io/pyd0fawt1/static/menswa.png' },
-  { label: "Women's Watches", path: '/womens-watches', image: 'https://ik.imagekit.io/pyd0fawt1/static/womenswa.png' },
-  { label: 'Sunglasses', path: '/sunglasses', image: 'https://ik.imagekit.io/pyd0fawt1/static/sunglasses.png' },
-  { label: "Men's Belt", path: '/mens-belts', image: 'https://ik.imagekit.io/pyd0fawt1/static/belt.png' },
-  { label: 'Mens Wallet', path: '/mens-wallet', image: 'https://ik.imagekit.io/pyd0fawt1/static/wallet.png' },
-  { label: "Men's Perfumes", path: '/mens-perfumes', image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=400&auto=format&fit=crop' },
-  { label: 'Accesories', path: '/accessories', image: 'https://ik.imagekit.io/pyd0fawt1/static/Accesories.png' },
-  { label: "Women's Perfumes", path: '/womens-perfumes', image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=400&auto=format&fit=crop' }
+  { label: "Men's Watches", path: '/mens-watches', image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=600&auto=format&fit=crop' },
+  { label: "Women's Watches", path: '/womens-watches', image: 'https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?q=80&w=600&auto=format&fit=crop' },
+  { label: 'Sunglasses', path: '/sunglasses', image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=600&auto=format&fit=crop' },
+  { label: "Men's Belt", path: '/mens-belts', image: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=600&auto=format&fit=crop' },
+  { label: 'Mens Wallet', path: '/mens-wallet', image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=600&auto=format&fit=crop' },
+  { label: "Men's Perfumes", path: '/mens-perfumes', image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=600&auto=format&fit=crop' },
+  { label: 'Accesories', path: '/accessories', image: 'https://images.unsplash.com/photo-1611591475281-22920253457a?q=80&w=600&auto=format&fit=crop' },
+  { label: "Women's Perfumes", path: '/womens-perfumes', image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=600&auto=format&fit=crop' }
 ];
 
 const ShopByCategory = () => {
