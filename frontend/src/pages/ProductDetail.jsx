@@ -84,6 +84,32 @@ const ProductDetail = () => {
   const fetchProduct = async () => {
     setLoading(true);
     try {
+      /* Try universal product API first */
+      try {
+        const directData = await productAPI.getProductById(id);
+        if (directData && directData.success && directData.data?.product) {
+          const loadedProduct = directData.data.product;
+          setProduct(loadedProduct);
+          if (loadedProduct.sizes?.length > 0) setSelectedSize(loadedProduct.sizes[0]);
+          if (loadedProduct?.colorVariants?.length > 0) {
+            const first = loadedProduct.colorVariants[0];
+            setSelectedColor(typeof first === 'string' ? first : (first.color || ''));
+          } else if (loadedProduct?.colorOptions?.length > 0) {
+            setSelectedColor(loadedProduct.colorOptions[0]);
+          } else if (loadedProduct?.colors?.length > 0) {
+            setSelectedColor(loadedProduct.colors[0]);
+          }
+          if (loadedProduct.boxOptions?.length > 0) {
+            const firstBox = loadedProduct.boxOptions[0];
+            setSelectedBoxType(typeof firstBox === 'string' ? firstBox : (firstBox.name || ''));
+          }
+          fetchRelatedProducts(loadedProduct);
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Direct getProductById failed, trying category fallbacks...", err);
+      }
       const validCategories = ['men', 'women', 'watches', 'lens', 'accessories'];
       let foundData = null;
 
