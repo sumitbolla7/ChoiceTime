@@ -384,11 +384,27 @@ const ProductDetail = () => {
 
   const handlePrevImage = () => {
     const activeColorVariant = (product.colorVariants || []).find(
-    (v) => typeof v === 'object' && v.color && selectedColor && v.color.toLowerCase() === selectedColor.toLowerCase()
+    (v) => typeof v === 'object' && v && v.color && selectedColor && v.color.toLowerCase() === selectedColor.toLowerCase()
   );
-  let productImages = product.images || [product.image || product.thumbnail];
+  const colorVariantImages = (product.colorVariants || [])
+    .map(v => typeof v === 'object' ? v.image : null)
+    .filter(img => img && typeof img === 'string' && img.trim() !== '');
+
+  let mainImages = Array.isArray(product.images) && product.images.length > 0
+    ? product.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
+    : (product.image || product.thumbnail ? [product.image || product.thumbnail] : []);
+
+  if (mainImages.length === 0 && colorVariantImages.length > 0) {
+    mainImages = colorVariantImages;
+  }
+
+  let productImages = [...mainImages];
   if (activeColorVariant && activeColorVariant.image) {
     productImages = [activeColorVariant.image, ...productImages.filter(img => img !== activeColorVariant.image)];
+  }
+
+  if (productImages.length === 0) {
+    productImages = [getPlaceholderImage(400, 400)];
   }
     setSelectedImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
   };
