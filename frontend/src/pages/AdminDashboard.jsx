@@ -2264,17 +2264,44 @@ const AdminDashboard = () => {
                         className="w-full sm:w-1/3 border rounded-lg px-3 py-1.5 text-sm"
                         placeholder="Color name (e.g. Black)"
                       />
-                      <input
-                        type="text"
-                        value={variant.image || ''}
-                        onChange={(e) => {
-                          const updated = [...(productForm.colorVariants || [])];
-                          updated[idx] = { ...updated[idx], image: e.target.value };
-                          setProductForm((prev) => ({ ...prev, colorVariants: updated }));
-                        }}
-                        className="flex-1 w-full border rounded-lg px-3 py-1.5 text-sm"
-                        placeholder="Image URL for this color (https://ik.imagekit.io/...)"
-                      />
+                      <div className="flex-1 w-full flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={variant.image || ''}
+                          onChange={(e) => {
+                            const updated = [...(productForm.colorVariants || [])];
+                            updated[idx] = { ...updated[idx], image: e.target.value };
+                            setProductForm((prev) => ({ ...prev, colorVariants: updated }));
+                          }}
+                          className="flex-1 border rounded-lg px-3 py-1.5 text-sm"
+                          placeholder="Image URL for this color (https://ik.imagekit.io/...)"
+                        />
+                        <label className="cursor-pointer px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-1.5 shrink-0 shadow-sm">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          <span>Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              try {
+                                const res = await uploadImageToCloudinary(file);
+                                if (res.success && res.url) {
+                                  const updated = [...(productForm.colorVariants || [])];
+                                  updated[idx] = { ...updated[idx], image: res.url };
+                                  setProductForm((prev) => ({ ...prev, colorVariants: updated }));
+                                }
+                              } catch (err) {
+                                alert('Image upload failed. Please try again.');
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
                       {variant.image && (
                         <img src={variant.image} alt={variant.color} className="w-8 h-8 object-cover rounded border border-gray-300 flex-shrink-0" />
                       )}
