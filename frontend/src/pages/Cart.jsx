@@ -295,7 +295,11 @@ const Cart = () => {
                             {(item.size || item.color || item.boxType) && (
                               <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                                 {item.size && <span className="text-xs text-gray-500">Size: <span className="font-medium text-gray-700">{item.size}</span></span>}
-                                {item.color && <span className="text-xs text-gray-500">Color: <span className="font-medium text-gray-700">{item.color}</span></span>}
+                                {(item.color || item.selectedColor) && (
+                        <span className="text-xs font-bold text-purple-900 bg-purple-100 border border-purple-200 px-2 py-0.5 rounded">
+                          Color: {item.color || item.selectedColor}
+                        </span>
+                      )}
                                 {item.boxType && <span className="text-xs text-gray-500">Box: <span className="font-medium text-gray-700">{item.boxType}{boxPrice > 0 ? ` (+₹${boxPrice})` : ''}</span></span>}
                               </div>
                             )}
