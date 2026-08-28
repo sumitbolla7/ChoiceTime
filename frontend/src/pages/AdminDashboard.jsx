@@ -1342,9 +1342,12 @@ const AdminDashboard = () => {
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
         isActive: productForm.isActive === false ? false : true,
-        colorOptions: productForm.colorOptions
-          ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
-          : [],
+        colorOptions: (() => {
+          const fromText = productForm.colorOptions ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean) : [];
+          const fromVars = (productForm.colorVariants || []).map(v => v.color).filter(Boolean);
+          return Array.from(new Set([...fromText, ...fromVars]));
+        })(),
+        colorVariants: (productForm.colorVariants || []).filter(v => v && (v.color || v.image)),
         boxOptions: buildBoxOptionsPayload(),
         // Watch specific fields
         model: productForm.model || '',
@@ -2235,6 +2238,73 @@ const AdminDashboard = () => {
                     />
                     <p className="text-xs text-gray-500 mt-1">Enter color names separated by commas. Users will choose one when ordering.</p>
                   </div>
+                </div>
+                
+                {/* Color-Specific Image Variants Section */}
+                <div className="mt-4 border-t border-gray-200 pt-3">
+                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                    Color-Specific Image Variants (Amazon / Flipkart Style)
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Add color name + image URL for each color. When customer selects a color (e.g. Black), the product page main image will automatically switch to that color watch!
+                  </p>
+                  {(Array.isArray(productForm.colorVariants) && productForm.colorVariants.length > 0
+                    ? productForm.colorVariants
+                    : [{ color: '', image: '' }]
+                  ).map((variant, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row items-center gap-2 mb-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                      <input
+                        type="text"
+                        value={variant.color || ''}
+                        onChange={(e) => {
+                          const updated = [...(productForm.colorVariants || [])];
+                          updated[idx] = { ...updated[idx], color: e.target.value };
+                          setProductForm((prev) => ({ ...prev, colorVariants: updated }));
+                        }}
+                        className="w-full sm:w-1/3 border rounded-lg px-3 py-1.5 text-sm"
+                        placeholder="Color name (e.g. Black)"
+                      />
+                      <input
+                        type="text"
+                        value={variant.image || ''}
+                        onChange={(e) => {
+                          const updated = [...(productForm.colorVariants || [])];
+                          updated[idx] = { ...updated[idx], image: e.target.value };
+                          setProductForm((prev) => ({ ...prev, colorVariants: updated }));
+                        }}
+                        className="flex-1 w-full border rounded-lg px-3 py-1.5 text-sm"
+                        placeholder="Image URL for this color (https://ik.imagekit.io/...)"
+                      />
+                      {variant.image && (
+                        <img src={variant.image} alt={variant.color} className="w-8 h-8 object-cover rounded border border-gray-300 flex-shrink-0" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = (productForm.colorVariants || []).filter((_, i) => i !== idx);
+                          setProductForm((prev) => ({ ...prev, colorVariants: updated }));
+                        }}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                        title="Remove color variant"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProductForm((prev) => ({
+                        ...prev,
+                        colorVariants: [...(prev.colorVariants || []), { color: '', image: '' }]
+                      }));
+                    }}
+                    className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                  >
+                    + Add Color Image Variant
+                  </button>
                 </div>
                 {/* Box Options with Price */}
                 <div className="mt-4">
