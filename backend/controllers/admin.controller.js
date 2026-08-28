@@ -297,6 +297,7 @@ export const createProduct = async (req, res) => {
       ...(productData.thumbnail && { thumbnail: productData.thumbnail }),
       ...(productData.color && { color: productData.color }),
       ...(productData.colorOptions && { colorOptions: productData.colorOptions }),
+        ...(productData.colorVariants && { colorVariants: productData.colorVariants }),
       ...(productData.boxOptions && { boxOptions: productData.boxOptions }),
       ...(productData.productDetails && { productDetails: productData.productDetails }),
       // Page position fields
@@ -387,6 +388,7 @@ export const updateProduct = async (req, res) => {
     }
 
     if (productData.colorOptions !== undefined) updatePayload.colorOptions = productData.colorOptions;
+    if (productData.colorVariants !== undefined) updatePayload.colorVariants = productData.colorVariants;
     if (productData.boxOptions !== undefined) updatePayload.boxOptions = productData.boxOptions;
     if (productData.pageNumberAll !== undefined) updatePayload.pageNumberAll = Number(productData.pageNumberAll ?? 0);
     if (productData.pageNumberCategory !== undefined) {
