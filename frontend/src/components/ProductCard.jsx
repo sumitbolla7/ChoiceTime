@@ -35,6 +35,12 @@ const ProductCard = ({ product }) => {
       productImages = keys.map(k => product.images[k].trim());
     }
   }
+  // Extract colorVariant images if product.images is empty
+  if (productImages.length === 0 && Array.isArray(product.colorVariants) && product.colorVariants.length > 0) {
+    const vImgs = product.colorVariants.map(v => typeof v === 'object' ? v.image : null).filter(img => img && typeof img === 'string' && img.trim() !== '');
+    if (vImgs.length > 0) productImages = vImgs;
+  }
+
   if (productImages.length === 0) {
     const fallbackImage =
       product.image ||
@@ -42,8 +48,7 @@ const ProductCard = ({ product }) => {
       (product.images && product.images.image1) ||
       (product.images && product.images.image2) ||
       (product.images && product.images.image3) ||
-      (product.images && product.images.image4) ||
-      (Array.isArray(product.colorVariants) && product.colorVariants.find(v => v && typeof v === 'object' && v.image)?.image);
+      (product.images && product.images.image4);
     if (fallbackImage && typeof fallbackImage === 'string' && fallbackImage.trim() !== '') {
       productImages = [fallbackImage.trim()];
     }
