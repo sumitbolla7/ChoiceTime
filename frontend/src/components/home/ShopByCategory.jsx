@@ -7,7 +7,7 @@ const categories = [
   { label: "Men's Belt", path: '/mens-belts', image: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=600&auto=format&fit=crop' },
   { label: 'Mens Wallet', path: '/mens-wallet', image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=600&auto=format&fit=crop' },
   { label: "Men's Perfumes", path: '/mens-perfumes', image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=600&auto=format&fit=crop' },
-  { label: 'Accesories', path: '/accessories', image: 'https://images.unsplash.com/photo-1611591475281-22920253457a?q=80&w=600&auto=format&fit=crop' },
+  { label: 'Accesories', path: '/accessories', image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=600&auto=format&fit=crop' },
   { label: "Women's Perfumes", path: '/womens-perfumes', image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=600&auto=format&fit=crop' },
   { label: 'Offline Store Videos', path: '/reels', image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=600&auto=format&fit=crop', isVideoTag: true }
 ];
@@ -16,7 +16,6 @@ const ShopByCategory = () => {
   return (
     <section className="pt-10 md:pt-14 pb-4 md:pb-6 bg-brown-50">
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
-        {/* Section Header */}
         <div className="text-center mb-6 md:mb-10">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 uppercase tracking-widest">
             Shop By Category
@@ -27,7 +26,6 @@ const ShopByCategory = () => {
           <div className="mt-2.5 mx-auto w-14 h-0.5 bg-gray-800 rounded-full"></div>
         </div>
 
-        {/* 3x3 Grid Layout (3 items per row on mobile & desktop) */}
         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-9 gap-2.5 sm:gap-4 md:gap-5">
           {categories.map((cat, idx) => (
             <Link
