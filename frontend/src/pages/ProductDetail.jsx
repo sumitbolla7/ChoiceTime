@@ -383,7 +383,17 @@ const ProductDetail = () => {
   };
 
   const handlePrevImage = () => {
-    const activeColorVariant = (product.colorVariants || []).find(
+    setSelectedImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    setSelectedImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1));
+  };
+
+  if (loading) return <LoadingState />;
+  if (!product) return <NotFoundState />;
+
+  const activeColorVariant = (product.colorVariants || []).find(
     (v) => typeof v === 'object' && v && v.color && selectedColor && v.color.toLowerCase() === selectedColor.toLowerCase()
   );
   const colorVariantImages = (product.colorVariants || [])
@@ -406,18 +416,6 @@ const ProductDetail = () => {
   if (productImages.length === 0) {
     productImages = [getPlaceholderImage(400, 400)];
   }
-    setSelectedImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
-  };
-
-  const handleNextImage = () => {
-    const productImages = product.images || [product.image || product.thumbnail];
-    setSelectedImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1));
-  };
-
-  if (loading) return <LoadingState />;
-  if (!product) return <NotFoundState />;
-
-  const productImages = product.images || [product.image || product.thumbnail];
   const finalPrice = product.price || product.finalPrice;
   const originalPrice = product.originalPrice || product.mrp || 0;
   const alreadyInCart = isProductInCart(product._id || product.id);
