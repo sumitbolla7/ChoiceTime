@@ -2,6 +2,12 @@ import express from 'express';
 import Cart from '../models/Cart.js';
 import { protect } from '../middleware/authMiddleware.js';
 
+const colorKey = (c) =>
+  String(c || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+
 const router = express.Router();
 
 // Get user's cart
@@ -64,7 +70,7 @@ router.post('/add', protect, async (req, res) => {
         itemProductId && productId && 
         String(itemProductId) === String(productId) &&
         item.size === size &&
-        item.color === color &&
+        colorKey(item.color) === colorKey(color) &&
         item.boxType === boxType
       );
     });

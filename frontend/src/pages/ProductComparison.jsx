@@ -3,6 +3,7 @@ import { X, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../components/ToastContainer';
+import { pickDefaultColor, productSnapshotForCart } from '../utils/colorVariants';
 
 const ProductComparison = () => {
   const { addToCart, isProductInCart } = useCart();
@@ -33,9 +34,10 @@ const ProductComparison = () => {
 
   const handleAddToCart = async (product) => {
     const pid = product._id || product.id;
-    if (pid && isProductInCart(pid)) return;
+    const color = pickDefaultColor(product);
+    if (pid && isProductInCart(pid, color)) return;
     try {
-      await addToCart(product, 1);
+      await addToCart(productSnapshotForCart(product, color), 1, product.sizes?.[0] || '', color);
       success('Product added to cart');
     } catch (err) {
       showError(err.message || 'Failed to add to cart');

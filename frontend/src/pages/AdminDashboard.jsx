@@ -15,7 +15,12 @@ import {
   subCategoryToPayload,
 } from '../utils/subCategory';
 import ColorVariantsEditor from '../components/ColorVariantsEditor';
-import { buildColorVariantsPayload, toAdminColorVariants } from '../utils/colorVariants';
+import {
+  buildColorVariantsPayload,
+  toAdminColorVariants,
+  uniqueColorNames,
+  collectImagesFromVariants,
+} from '../utils/colorVariants';
 
 const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
@@ -1330,9 +1335,36 @@ const AdminDashboard = () => {
     setActiveSection('edit-product');
   };
 
+  const buildColorFields = () => {
+    const colorVariants = buildColorVariantsPayload(productForm.colorVariants, uploadedImageUrls);
+    const fromText = productForm.colorOptions
+      ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
+      : [];
+    const colorOptions = uniqueColorNames([
+      ...fromText,
+      ...colorVariants.map((v) => v.color),
+    ]);
+    const images = [];
+    (uploadedImageUrls || []).forEach((url) => {
+      if (url && !images.includes(url)) images.push(url);
+    });
+    collectImagesFromVariants(colorVariants).forEach((url) => {
+      if (url && !images.includes(url)) images.push(url);
+    });
+    return { colorOptions, colorVariants, images };
+  };
+
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     try {
+      const { colorOptions, colorVariants, images } = buildColorFields();
+      if (!images.length) {
+        setMessage({
+          type: 'error',
+          text: 'Add at least one product image, or upload an image on each color variant.',
+        });
+        return;
+      }
       const payload = {
         category: productForm.category,
         name: productForm.name,
@@ -1342,18 +1374,14 @@ const AdminDashboard = () => {
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
         stock: Number(productForm.stock || 0),
-        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : [],
+        images,
         description: productForm.description || '',
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
         isActive: productForm.isActive === false ? false : true,
-        colorOptions: (() => {
-          const fromText = productForm.colorOptions ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean) : [];
-          const fromVars = (productForm.colorVariants || []).map(v => v.color).filter(Boolean);
-          return Array.from(new Set([...fromText, ...fromVars]));
-        })(),
-        colorVariants: buildColorVariantsPayload(productForm.colorVariants),
+        colorOptions,
+        colorVariants,
         boxOptions: buildBoxOptionsPayload(),
         // Watch specific fields
         model: productForm.model || '',
@@ -1396,6 +1424,14 @@ const AdminDashboard = () => {
     e.preventDefault();
     if (!editingProduct) return;
     try {
+      const { colorOptions, colorVariants, images } = buildColorFields();
+      if (!images.length) {
+        setMessage({
+          type: 'error',
+          text: 'Add at least one product image, or upload an image on each color variant.',
+        });
+        return;
+      }
       const payload = {
         category: productForm.category,
         name: productForm.name,
@@ -1405,18 +1441,14 @@ const AdminDashboard = () => {
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
         stock: Number(productForm.stock || 0),
-        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : [],
+        images,
         description: productForm.description || '',
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
         isActive: productForm.isActive === false ? false : true,
-        colorOptions: (() => {
-          const fromText = productForm.colorOptions ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean) : [];
-          const fromVars = (productForm.colorVariants || []).map(v => v.color).filter(Boolean);
-          return Array.from(new Set([...fromText, ...fromVars]));
-        })(),
-        colorVariants: buildColorVariantsPayload(productForm.colorVariants),
+        colorOptions,
+        colorVariants,
         boxOptions: buildBoxOptionsPayload(),
         // Watch specific fields
         model: productForm.model || '',

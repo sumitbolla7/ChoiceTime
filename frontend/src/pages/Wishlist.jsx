@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { productAPI } from '../utils/api';
 import { handleImageError } from '../utils/imageFallback';
+import { pickDefaultColor, productSnapshotForCart } from '../utils/colorVariants';
 
 const Wishlist = () => {
   const { wishlist, wishlistIds, removeFromWishlist, loading: wishlistLoading } = useWishlist();
@@ -74,10 +75,16 @@ const Wishlist = () => {
 
   const handleAddToCart = async (product) => {
     const pid = product._id || product.id;
-    if (isProductInCart(pid)) return;
+    const color = pickDefaultColor(product);
+    if (isProductInCart(pid, color)) return;
     setAddingToCartId(pid);
     try {
-      await addToCart(product, 1, product.sizes?.[0] || '', product.colors?.[0] || '');
+      await addToCart(
+        productSnapshotForCart(product, color),
+        1,
+        product.sizes?.[0] || '',
+        color
+      );
     } catch (err) {
       console.error('Error adding to cart:', err);
     } finally {

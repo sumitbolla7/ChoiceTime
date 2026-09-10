@@ -439,6 +439,17 @@ const ProductDetail = () => {
   };
 
   useEffect(() => {
+    if (!product) return;
+    const urlColor = searchParams.get('color');
+    if (!urlColor) return;
+    const fromUrl = findVariantByColor(product, urlColor);
+    if (fromUrl && !colorsMatch(selectedColor, fromUrl.color)) {
+      setSelectedColor(fromUrl.color);
+      setSelectedImageIndex(0);
+    }
+  }, [searchParams, product]);
+
+  useEffect(() => {
     if (!selectedColor) return;
     const slug = colorSlug(selectedColor);
     if (searchParams.get('color') === slug) return;
