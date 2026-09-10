@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import {
   uploadVideoToCloudinary,
   uploadImageToCloudinary,
-  MAX_PRODUCT_IMAGE_BYTES,
 } from '../utils/cloudinary';
 import {
   slugifySubCategory,
@@ -1246,21 +1245,16 @@ const AdminDashboard = () => {
         completedCount++;
         continue;
       }
-      if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
-        window.alert(
-          `"${file.name}" is larger than 1.5 MB.\n\nPlease compress it (Photos app, phone gallery editor, or tinypng.com) and try again.`
-        );
-        completedCount++;
-        continue;
-      }
       try {
         setImageUploadProgress(Math.round((completedCount / files.length) * 100));
         const result = await uploadImageToCloudinary(file, (progress) => {
           const overallProgress = Math.round(((completedCount + progress / 100) / files.length) * 100);
           setImageUploadProgress(overallProgress);
         });
-        if (result.success) {
+        if (result.success && result.url) {
           setUploadedImageUrls((prev) => [...prev, result.url]);
+        } else {
+          setMessage({ type: 'error', text: `Failed to upload ${file.name}` });
         }
         completedCount++;
       } catch (error) {
@@ -1356,12 +1350,16 @@ const AdminDashboard = () => {
 
   const handleCreateProduct = async (e) => {
     e.preventDefault();
+    if (imageUploading) {
+      setMessage({ type: 'error', text: 'Wait for images to finish uploading, then save.' });
+      return;
+    }
     try {
       const { colorOptions, colorVariants, images } = buildColorFields();
       if (!images.length) {
         setMessage({
           type: 'error',
-          text: 'Add at least one product image, or upload an image on each color variant.',
+          text: 'Add at least one product image, or upload an image on each color variant. Phone photos are compressed automatically.',
         });
         return;
       }
@@ -1423,12 +1421,16 @@ const AdminDashboard = () => {
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
     if (!editingProduct) return;
+    if (imageUploading) {
+      setMessage({ type: 'error', text: 'Wait for images to finish uploading, then save.' });
+      return;
+    }
     try {
       const { colorOptions, colorVariants, images } = buildColorFields();
       if (!images.length) {
         setMessage({
           type: 'error',
-          text: 'Add at least one product image, or upload an image on each color variant.',
+          text: 'Add at least one product image, or upload an image on each color variant. Phone photos are compressed automatically.',
         });
         return;
       }
@@ -2223,7 +2225,7 @@ const AdminDashboard = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       <p className="text-sm text-gray-600">Click to upload images</p>
-                      <p className="text-xs text-gray-400">PNG, JPG, WEBP. Max 1.5 MB each. Larger files: compress first. Smaller ones auto-compress before upload.</p>
+                      <p className="text-xs text-gray-400">PNG, JPG, WEBP. Large phone photos are compressed automatically before upload.</p>
                     </div>
                   )}
                 </div>
@@ -2841,7 +2843,7 @@ const AdminDashboard = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <p className="text-sm text-gray-600">Click to upload images</p>
-                        <p className="text-xs text-gray-400">PNG, JPG, WEBP. Max 1.5 MB each. Larger files: compress first. Smaller ones auto-compress before upload.</p>
+                        <p className="text-xs text-gray-400">PNG, JPG, WEBP. Large phone photos are compressed automatically before upload.</p>
                       </div>
                     )}
                   </div>

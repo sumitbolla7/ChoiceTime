@@ -459,13 +459,33 @@ export const updateProduct = async (req, res) => {
       if (flag !== undefined) updatePayload.isActive = flag;
     }
 
-    if (productData.colorOptions !== undefined) updatePayload.colorOptions = productData.colorOptions;
+    if (productData.colorOptions !== undefined) {
+      const seen = new Set();
+      const names = [];
+      (Array.isArray(productData.colorOptions) ? productData.colorOptions : []).forEach((n) => {
+        const s = String(n || '').trim();
+        if (!s) return;
+        const key = s.toLowerCase().replace(/\s+/g, '-');
+        if (seen.has(key)) return;
+        seen.add(key);
+        names.push(s);
+      });
+      updatePayload.colorOptions = names;
+    }
     if (productData.colorVariants !== undefined) {
       const variantResult = sanitizeColorVariants(productData.colorVariants);
       if (variantResult.error) {
         return res.status(400).json({ success: false, message: variantResult.error });
       }
       updatePayload.colorVariants = variantResult.variants;
+      const merged = Array.isArray(updatePayload.images) ? [...updatePayload.images] : [];
+      (variantResult.variants || []).forEach((v) => {
+        (v.images || []).forEach((url) => {
+          const s = String(url || '').trim();
+          if (s && !merged.includes(s)) merged.push(s);
+        });
+      });
+      if (merged.length) updatePayload.images = merged;
     }
     if (productData.boxOptions !== undefined) updatePayload.boxOptions = productData.boxOptions;
     if (productData.pageNumberAll !== undefined) updatePayload.pageNumberAll = Number(productData.pageNumberAll ?? 0);
