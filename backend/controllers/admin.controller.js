@@ -66,10 +66,7 @@ const sanitizeColorVariants = (raw) => {
       (v.price !== undefined && v.price !== null && v.price !== '');
     if (!color && images.length === 0 && !hasOptional) continue;
     if (!color) return { error: 'Each color variant needs a color name' };
-    if (images.length === 0) {
-      return { error: `Color "${color}" needs at least one image` };
-    }
-    const item = { color, hex, image: images[0], images };
+    const item = { color, hex, image: images[0] || '', images };
     if (v.stock !== undefined && v.stock !== null && v.stock !== '') {
       const n = Number(v.stock);
       if (Number.isNaN(n) || n < 0) return { error: `Invalid stock for color "${color}"` };
@@ -300,7 +297,15 @@ export const getAdminProducts = async (req, res) => {
     const products = await Product.find(query).sort({ updatedAt: -1 }).limit(1000).lean();
     res.status(200).json({
       success: true,
-      data: { products },
+      data: {
+        products: products.map((p) => ({
+          ...p,
+          colorVariants:
+            Array.isArray(p.colorVariants) && p.colorVariants.length
+              ? p.colorVariants
+              : p.productDetails?.colorVariants || [],
+        })),
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -369,9 +374,18 @@ export const createProduct = async (req, res) => {
       ...(productData.thumbnail && { thumbnail: productData.thumbnail }),
       ...(productData.color && { color: productData.color }),
       ...(mergedColorOptions.length && { colorOptions: mergedColorOptions }),
-      ...(!variantResult.skip && { colorVariants: variantResult.variants }),
+      ...(!variantResult.skip && { colorVariants: variantList }),
+      ...(!variantResult.skip || productData.productDetails
+        ? {
+            productDetails: {
+              ...(productData.productDetails && typeof productData.productDetails === 'object'
+                ? productData.productDetails
+                : {}),
+              ...(!variantResult.skip ? { colorVariants: variantList } : {}),
+            },
+          }
+        : {}),
       ...(productData.boxOptions && { boxOptions: productData.boxOptions }),
-      ...(productData.productDetails && { productDetails: productData.productDetails }),
       // Page position fields
       pageNumberAll: Number(productData.pageNumberAll ?? 0),
       pageNumberCategory: Number(productData.pageNumberCategory ?? 0),
@@ -408,6 +422,14 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
+    const existing = await Product.findById(req.params.id).lean();
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
     // Only apply fields that are actually present — so Live on Site toggles
     // ({ isActive: false }) never wipe price/stock/subCategory by accident.
     const body = req.body || {};
@@ -478,7 +500,11 @@ export const updateProduct = async (req, res) => {
         return res.status(400).json({ success: false, message: variantResult.error });
       }
       updatePayload.colorVariants = variantResult.variants;
-      const merged = Array.isArray(updatePayload.images) ? [...updatePayload.images] : [];
+      const merged = Array.isArray(updatePayload.images)
+        ? [...updatePayload.images]
+        : Array.isArray(productData.images)
+          ? [...productData.images]
+          : [];
       (variantResult.variants || []).forEach((v) => {
         (v.images || []).forEach((url) => {
           const s = String(url || '').trim();
@@ -486,6 +512,20 @@ export const updateProduct = async (req, res) => {
         });
       });
       if (merged.length) updatePayload.images = merged;
+      const incomingDetails =
+        productData.productDetails && typeof productData.productDetails === 'object'
+          ? productData.productDetails
+          : {};
+      updatePayload.productDetails = {
+        ...(existing.productDetails || {}),
+        ...incomingDetails,
+        colorVariants: variantResult.variants,
+      };
+    } else if (productData.productDetails !== undefined && typeof productData.productDetails === 'object') {
+      updatePayload.productDetails = {
+        ...(existing.productDetails || {}),
+        ...productData.productDetails,
+      };
     }
     if (productData.boxOptions !== undefined) updatePayload.boxOptions = productData.boxOptions;
     if (productData.pageNumberAll !== undefined) updatePayload.pageNumberAll = Number(productData.pageNumberAll ?? 0);
@@ -532,8 +572,9 @@ export const updateProduct = async (req, res) => {
 
     // Sync update to secondary collections
     try {
+      const { colorVariants: _cv, productDetails: _pd, ...syncPayload } = updatePayload;
       const syncFilter = { $or: [{ _id: req.params.id }, { name: product.name }, { title: product.name }] };
-      const syncUpdate = { $set: updatePayload };
+      const syncUpdate = { $set: syncPayload };
       await Promise.allSettled([
         Watch.updateMany(syncFilter, syncUpdate),
         WatchNew.updateMany(syncFilter, syncUpdate),

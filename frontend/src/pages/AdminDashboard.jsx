@@ -17,6 +17,7 @@ import ColorVariantsEditor from '../components/ColorVariantsEditor';
 import {
   buildColorVariantsPayload,
   toAdminColorVariants,
+  toAdminColorVariantsFromProduct,
   uniqueColorNames,
   collectImagesFromVariants,
 } from '../utils/colorVariants';
@@ -353,6 +354,27 @@ const AdminDashboard = () => {
       fetchAdminReviews();
     }
   }, [isAdmin, activeSection, productCategory]);
+
+  useEffect(() => {
+    if (activeSection !== 'add-product' && activeSection !== 'edit-product') return;
+    const names = productForm.colorOptions
+      ? productForm.colorOptions.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    if (!names.length) return;
+    setProductForm((prev) => {
+      const next = toAdminColorVariants(prev.colorVariants, names);
+      const prevList = prev.colorVariants || [];
+      const same =
+        next.length === prevList.length &&
+        next.every(
+          (v, i) =>
+            v.color === prevList[i]?.color &&
+            (v.images || []).join('|') === (prevList[i]?.images || []).join('|')
+        );
+      if (same) return prev;
+      return { ...prev, colorVariants: next };
+    });
+  }, [activeSection, productForm.colorOptions]);
 
   // For View Products: get subcategory options from the selected nav category
   const selectedNavForViewProducts = useMemo(
@@ -1299,7 +1321,7 @@ const AdminDashboard = () => {
       isFeatured: product.isFeatured || false,
       isActive: product.isActive !== false,
       colorOptions: product.colorOptions?.join(', ') || '',
-      colorVariants: toAdminColorVariants(product.colorVariants),
+      colorVariants: toAdminColorVariantsFromProduct(product),
       boxOptions: product.boxOptions?.length > 0
         ? product.boxOptions.map((opt) =>
             typeof opt === 'string'
@@ -1330,7 +1352,7 @@ const AdminDashboard = () => {
   };
 
   const buildColorFields = () => {
-    const colorVariants = buildColorVariantsPayload(productForm.colorVariants, uploadedImageUrls);
+    const colorVariants = buildColorVariantsPayload(productForm.colorVariants);
     const fromText = productForm.colorOptions
       ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
       : [];
@@ -1380,6 +1402,10 @@ const AdminDashboard = () => {
         isActive: productForm.isActive === false ? false : true,
         colorOptions,
         colorVariants,
+        productDetails: {
+          ...((editingProduct && editingProduct.productDetails) || {}),
+          colorVariants,
+        },
         boxOptions: buildBoxOptionsPayload(),
         // Watch specific fields
         model: productForm.model || '',
@@ -1451,6 +1477,10 @@ const AdminDashboard = () => {
         isActive: productForm.isActive === false ? false : true,
         colorOptions,
         colorVariants,
+        productDetails: {
+          ...((editingProduct && editingProduct.productDetails) || {}),
+          colorVariants,
+        },
         boxOptions: buildBoxOptionsPayload(),
         // Watch specific fields
         model: productForm.model || '',

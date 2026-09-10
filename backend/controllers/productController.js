@@ -81,7 +81,16 @@ export const getProducts = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: { products, total },
+      data: {
+        products: products.map((p) => ({
+          ...p,
+          colorVariants:
+            Array.isArray(p.colorVariants) && p.colorVariants.length
+              ? p.colorVariants
+              : p.productDetails?.colorVariants || [],
+        })),
+        total,
+      },
     });
   } catch (error) {
     if (error.name === 'MongoError' && error.code === 17007) {
@@ -108,9 +117,16 @@ export const getProductById = async (req, res) => {
         message: 'Product not found',
       });
     }
+    const hydrated = {
+      ...product,
+      colorVariants:
+        Array.isArray(product.colorVariants) && product.colorVariants.length
+          ? product.colorVariants
+          : product.productDetails?.colorVariants || [],
+    };
     res.status(200).json({
       success: true,
-      data: { product },
+      data: { product: hydrated },
     });
   } catch (error) {
     res.status(500).json({
