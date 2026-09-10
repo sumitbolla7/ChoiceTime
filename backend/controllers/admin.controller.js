@@ -323,6 +323,26 @@ export const createProduct = async (req, res) => {
     if (variantResult.error) {
       return res.status(400).json({ success: false, message: variantResult.error });
     }
+    const variantList = variantResult.skip ? [] : (variantResult.variants || []);
+    const mergedImages = [...imagesArr];
+    variantList.forEach((v) => {
+      (v.images || []).forEach((url) => {
+        const s = String(url || '').trim();
+        if (s && !mergedImages.includes(s)) mergedImages.push(s);
+      });
+    });
+    const mergedColorOptions = [];
+    const seenColor = new Set();
+    const pushColorName = (name) => {
+      const s = String(name || '').trim();
+      if (!s) return;
+      const key = s.toLowerCase().replace(/\s+/g, '-');
+      if (seenColor.has(key)) return;
+      seenColor.add(key);
+      mergedColorOptions.push(s);
+    };
+    (Array.isArray(productData.colorOptions) ? productData.colorOptions : []).forEach(pushColorName);
+    variantList.forEach((v) => pushColorName(v.color));
     const inferredGender = inferGenderFromCategory(cat, productData.gender);
     const createPayload = {
       name: (productData.name || '').trim(),
@@ -335,7 +355,7 @@ export const createProduct = async (req, res) => {
       discountPercent: Number(productData.discountPercent ?? 0),
       finalPrice: price,
       stock: stockNum,
-      images: imagesArr,
+      images: mergedImages,
       description: (productData.description || '').trim(),
       isNewArrival: Boolean(productData.isNewArrival),
       onSale: Boolean(productData.onSale),
@@ -348,7 +368,7 @@ export const createProduct = async (req, res) => {
       ...(productData.sizes && { sizes: productData.sizes }),
       ...(productData.thumbnail && { thumbnail: productData.thumbnail }),
       ...(productData.color && { color: productData.color }),
-      ...(productData.colorOptions && { colorOptions: productData.colorOptions }),
+      ...(mergedColorOptions.length && { colorOptions: mergedColorOptions }),
       ...(!variantResult.skip && { colorVariants: variantResult.variants }),
       ...(productData.boxOptions && { boxOptions: productData.boxOptions }),
       ...(productData.productDetails && { productDetails: productData.productDetails }),

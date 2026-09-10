@@ -47,15 +47,66 @@ export const colorsMatch = (a, b) =>
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
+/** Keep first spelling of each color (black / Black count as one). Prefer the entry with more images. */
+export const uniqueColorNames = (names) => {
+  const seen = new Set();
+  const out = [];
+  (names || []).forEach((n) => {
+    const s = String(n || '').trim();
+    if (!s) return;
+    const slug = colorSlug(s);
+    if (seen.has(slug)) return;
+    seen.add(slug);
+    out.push(s);
+  });
+  return out;
+};
+
+export const mergeVariantsByColor = (list) => {
+  const bySlug = new Map();
+  (list || []).forEach((raw) => {
+    const n = normalizeColorVariant(raw);
+    if (!n || !n.color) return;
+    const slug = colorSlug(n.color);
+    const prev = bySlug.get(slug);
+    if (!prev) {
+      bySlug.set(slug, n);
+      return;
+    }
+    const images = [...(prev.images || [])];
+    (n.images || []).forEach((url) => {
+      if (url && !images.includes(url)) images.push(url);
+    });
+    bySlug.set(slug, {
+      color: prev.images?.length >= (n.images || []).length ? prev.color : n.color,
+      hex: prev.hex || n.hex,
+      image: images[0] || '',
+      images,
+      stock: prev.stock !== null && prev.stock !== undefined ? prev.stock : n.stock,
+      price: prev.price !== null && prev.price !== undefined ? prev.price : n.price,
+    });
+  });
+  return [...bySlug.values()];
+};
+
+export const collectImagesFromVariants = (list) => {
+  const images = [];
+  mergeVariantsByColor(list).forEach((v) => {
+    (v.images || []).forEach((url) => {
+      if (url && !images.includes(url)) images.push(url);
+    });
+  });
+  return images;
+};
+
 export const listProductColorVariants = (product) => {
-  const fromVariants = asArray(product?.colorVariants)
-    .map(normalizeColorVariant)
-    .filter((v) => v && v.color);
+  const fromVariants = mergeVariantsByColor(asArray(product?.colorVariants));
   const names = new Set(fromVariants.map((v) => colorSlug(v.color)));
-  const extras = asArray(product?.colorOptions || product?.colors || (product?.color ? [product.color] : []))
-    .filter(Boolean)
-    .map((c) => (typeof c === 'string' ? c : c?.color))
-    .filter(Boolean)
+  const extras = uniqueColorNames(
+    asArray(product?.colorOptions || product?.colors || (product?.color ? [product.color] : []))
+      .map((c) => (typeof c === 'string' ? c : c?.color))
+      .filter(Boolean)
+  )
     .map((color) => normalizeColorVariant({ color }))
     .filter((v) => v && v.color && !names.has(colorSlug(v.color)));
   return [...fromVariants, ...extras];
@@ -150,16 +201,16 @@ export const toAdminColorVariants = (raw) => {
   }));
 };
 
-export const buildColorVariantsPayload = (list) =>
-  (list || [])
-    .map((v) => {
-      const n = normalizeColorVariant(v);
-      if (!n || (!n.color && !n.images.length)) return null;
+export const buildColorVariantsPayload = (list, fallbackImages = []) =>
+  mergeVariantsByColor(list)
+    .map((n) => {
+      if (!n.color && !n.images.length) return null;
+      const images = n.images?.length ? n.images : [...fallbackImages].filter(Boolean);
       const payload = {
         color: n.color,
         hex: n.hex || '',
-        image: n.images[0] || '',
-        images: n.images,
+        image: images[0] || '',
+        images,
       };
       if (n.stock !== null && n.stock !== undefined) payload.stock = n.stock;
       if (n.price !== null && n.price !== undefined) payload.price = n.price;
