@@ -16,6 +16,7 @@ import {
   colorsMatch,
   isVariantInStock,
   swatchCssColor,
+  productSnapshotForCart,
 } from '../utils/colorVariants';
 
 const ProductDetail = () => {
@@ -389,7 +390,14 @@ const ProductDetail = () => {
     const active = findVariantByColor(product, selectedColor);
     if (active && !isVariantInStock(active, product)) return;
     try {
-      await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType, selectedBoxPrice);
+      await addToCart(
+        productSnapshotForCart(product, selectedColor),
+        1,
+        selectedSize,
+        selectedColor,
+        selectedBoxType,
+        selectedBoxPrice
+      );
       setCartSuccessPopup(true);
       setTimeout(() => setCartSuccessPopup(false), 2500);
     } catch (error) {
@@ -402,7 +410,14 @@ const ProductDetail = () => {
     const active = findVariantByColor(product, selectedColor);
     if (active && !isVariantInStock(active, product)) return;
     try {
-      await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType, selectedBoxPrice);
+      await addToCart(
+        productSnapshotForCart(product, selectedColor),
+        1,
+        selectedSize,
+        selectedColor,
+        selectedBoxType,
+        selectedBoxPrice
+      );
       navigate('/checkout');
     } catch (error) {
       if (error.message.includes('login')) setShowLoginModal(true);

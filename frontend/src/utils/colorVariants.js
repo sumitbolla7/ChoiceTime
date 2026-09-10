@@ -83,6 +83,23 @@ export const pickDefaultColor = (product, urlColor) => {
   return (inStock || list[0]).color;
 };
 
+/** Snapshot used when adding to cart so variant price/images persist on the line item. */
+export const productSnapshotForCart = (product, selectedColor) => {
+  const active = findVariantByColor(product, selectedColor);
+  const snapshot = { ...product };
+  if (active?.price !== null && active?.price !== undefined && !Number.isNaN(Number(active.price))) {
+    const price = Number(active.price);
+    snapshot.price = price;
+    snapshot.finalPrice = price;
+  }
+  if (active?.images?.length) {
+    snapshot.images = active.images;
+    snapshot.image = active.images[0];
+    snapshot.thumbnail = active.images[0];
+  }
+  return snapshot;
+};
+
 export const galleryForColor = (product, selectedColor) => {
   const active = findVariantByColor(product, selectedColor);
   const variantImgs = variantGalleryImages(active);

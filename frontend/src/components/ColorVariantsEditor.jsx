@@ -1,6 +1,15 @@
 import { uploadImageToCloudinary } from '../utils/cloudinary';
 import { emptyAdminColorVariant } from '../utils/colorVariants';
 
+const hexForColorInput = (hex) => {
+  const h = String(hex || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(h)) return h;
+  if (/^#[0-9a-f]{3}$/i.test(h)) {
+    return `#${h[1]}${h[1]}${h[2]}${h[2]}${h[3]}${h[3]}`;
+  }
+  return '#000000';
+};
+
 const ColorVariantsEditor = ({ variants, onChange }) => {
   const list =
     Array.isArray(variants) && variants.length > 0 ? variants : [emptyAdminColorVariant()];
@@ -42,7 +51,7 @@ const ColorVariantsEditor = ({ variants, onChange }) => {
             <div className="flex items-center gap-2 sm:w-1/4">
               <input
                 type="color"
-                value={/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(variant.hex || '') ? variant.hex : '#000000'}
+                value={hexForColorInput(variant.hex)}
                 onChange={(e) => updateAt(idx, { hex: e.target.value })}
                 className="h-9 w-10 border rounded cursor-pointer p-0.5 bg-white"
                 title="Swatch color"
