@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import LoginModal from './LoginModal';
 import { handleImageError } from '../utils/imageFallback';
-import { listProductColorVariants, colorSlug, swatchCssColor } from '../utils/colorVariants';
+import { listProductColorVariants, colorSlug, swatchCssColor, productSnapshotForCart } from '../utils/colorVariants';
 
 const ProductCard = ({ product }) => {
   const { addToCart, isProductInCart } = useCart();
@@ -65,7 +65,6 @@ const ProductCard = ({ product }) => {
   const originalPrice = product.originalPrice || product.mrp || 0;
   const hasDiscount = originalPrice > 0 && originalPrice > finalPrice && finalPrice > 0;
   const productId = product._id || product.id;
-  const isAlreadyInCart = isProductInCart(productId);
 
   // Stock logic (support multiple possible field names)
   const inStockFlag =
@@ -108,6 +107,8 @@ const ProductCard = ({ product }) => {
     defaultImageSrc = previewImage;
     hoverImageSrc = previewVariant.images?.[1] || hoverImageSrc;
   }
+  const cartColor = previewVariant?.color || colorChoices[0]?.color || '';
+  const isAlreadyInCart = isProductInCart(productId, cartColor);
   const productHref = `/product/${productId}${previewVariant ? `?color=${encodeURIComponent(colorSlug(previewVariant.color))}` : ''}`;
 
   const handleAddClick = (e) => {
@@ -127,7 +128,7 @@ const ProductCard = ({ product }) => {
     
     setIsAdding(true);
     try {
-      await addToCart({ ...product, selectedSize });
+      await addToCart(productSnapshotForCart(product, cartColor), 1, selectedSize || '', cartColor);
       setCartSuccessPopup(true);
       setTimeout(() => setCartSuccessPopup(false), 2500);
       setTimeout(() => {

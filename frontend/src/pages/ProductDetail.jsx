@@ -386,7 +386,7 @@ const ProductDetail = () => {
   const handleAddToCart = async () => {
     if (!isAuthenticated) return setShowLoginModal(true);
     const pid = product?._id || product?.id;
-    if (pid && isProductInCart(pid)) return;
+    if (pid && isProductInCart(pid, selectedColor)) return;
     const active = findVariantByColor(product, selectedColor);
     if (active && !isVariantInStock(active, product)) return;
     try {
@@ -464,7 +464,7 @@ const ProductDetail = () => {
     (variantPrice !== null && !Number.isNaN(variantPrice) ? variantPrice : null) ??
     ((product?.price || 0) || (product?.finalPrice || 0));
   const originalPrice = (product?.originalPrice || 0) || product.mrp || 0;
-  const alreadyInCart = isProductInCart(product._id || product.id);
+  const alreadyInCart = isProductInCart(product._id || product.id, selectedColor);
   const variantHasStock =
     activeColorVariant &&
     activeColorVariant.stock !== null &&

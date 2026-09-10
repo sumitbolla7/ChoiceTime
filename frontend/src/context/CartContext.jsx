@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { cartAPI } from '../utils/api';
 import { useAuth } from './AuthContext';
+import { colorsMatch } from '../utils/colorVariants';
 
 const CartContext = createContext();
 
@@ -116,14 +117,16 @@ export const CartProvider = ({ children }) => {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  /** True if any cart line references this product (by id). */
+  /** True if a cart line matches this product. Pass color to match that variant only. */
   const isProductInCart = useCallback(
-    (productId) => {
+    (productId, color) => {
       if (!productId || !Array.isArray(cart)) return false;
       return cart.some((item) => {
         const cartProduct = item.product || item;
         const cartProductId = cartProduct?._id || cartProduct?.id || item.productId;
-        return String(cartProductId) === String(productId);
+        if (String(cartProductId) !== String(productId)) return false;
+        if (color) return colorsMatch(item.color || item.selectedColor, color);
+        return true;
       });
     },
     [cart]

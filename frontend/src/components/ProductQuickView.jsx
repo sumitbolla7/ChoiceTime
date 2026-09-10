@@ -5,6 +5,16 @@ import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ToastContainer';
 import { Link } from 'react-router-dom';
+import {
+  listProductColorVariants,
+  pickDefaultColor,
+  galleryForColor,
+  findVariantByColor,
+  isVariantInStock,
+  swatchCssColor,
+  productSnapshotForCart,
+  colorSlug,
+} from '../utils/colorVariants';
 
 const ProductQuickView = ({ product, isOpen, onClose }) => {
   const { addToCart, isProductInCart } = useCart();
@@ -22,9 +32,11 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
 
   useEffect(() => {
     if (product) {
-      setMainImage(product.images?.[0] || product.image || '');
       setSelectedSize(isWatch ? '' : (product.sizes?.[0] || ''));
-      setSelectedColor(product.colorOptions?.[0] || product.colors?.[0] || '');
+      const initialColor = pickDefaultColor(product);
+      setSelectedColor(initialColor);
+      const gallery = galleryForColor(product, initialColor);
+      setMainImage(gallery[0] || product.images?.[0] || product.image || '');
       const firstBox = product.boxOptions?.[0];
       setSelectedBoxType(firstBox ? (typeof firstBox === 'string' ? firstBox : firstBox.name) : '');
     }
@@ -33,7 +45,19 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
   if (!isOpen || !product) return null;
 
   const quickViewProductId = product._id || product.id;
-  const alreadyInCart = isProductInCart(quickViewProductId);
+  const colorChoices = listProductColorVariants(product);
+  const alreadyInCart = isProductInCart(quickViewProductId, selectedColor);
+  const activeColor = findVariantByColor(product, selectedColor);
+  const galleryImages = galleryForColor(product, selectedColor);
+  const variantPrice =
+    activeColor?.price !== null && activeColor?.price !== undefined ? Number(activeColor.price) : null;
+  const price =
+    variantPrice !== null && !Number.isNaN(variantPrice)
+      ? variantPrice
+      : product.price || product.finalPrice;
+  const originalPrice = product.originalPrice || product.mrp || 0;
+  const discount = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+  const outOfStock = activeColor ? !isVariantInStock(activeColor, product) : false;
 
   // Get box price for the selected box type
   const getQuickViewBoxPrice = () => {
@@ -46,9 +70,16 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
   };
 
   const handleAddToCart = async () => {
-    if (alreadyInCart) return;
+    if (alreadyInCart || outOfStock) return;
     try {
-      await addToCart(product, quantity, selectedSize, selectedColor, selectedBoxType, getQuickViewBoxPrice());
+      await addToCart(
+        productSnapshotForCart(product, selectedColor),
+        quantity,
+        selectedSize,
+        selectedColor,
+        selectedBoxType,
+        getQuickViewBoxPrice()
+      );
       success('Product added to cart');
       onClose();
     } catch (err) {
@@ -69,10 +100,6 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
     }
   };
 
-  const price = product.price || product.finalPrice;
-  const originalPrice = product.originalPrice || product.mrp || 0;
-  const discount = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -91,11 +118,11 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
               {/* Images */}
               <div>
                 <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
-                  <img src={mainImage} alt={product.name} className="w-full h-full object-cover" />
+                  <img src={mainImage || galleryImages[0]} alt={product.name} className="w-full h-full object-cover" />
                 </div>
-                {product.images && product.images.length > 1 && (
+                {galleryImages.length > 1 && (
                   <div className="flex gap-2 overflow-x-auto">
-                    {product.images.slice(0, 4).map((img, idx) => (
+                    {galleryImages.slice(0, 4).map((img, idx) => (
                       <button
                         key={idx}
                         onClick={() => setMainImage(img)}
@@ -148,36 +175,34 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
                 )}
 
                 {/* Colors */}
-                {(product.colorOptions?.length > 0 || product.colors?.length > 0) && (
+                {colorChoices.length > 0 && (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
                     <div className="flex gap-2 flex-wrap">
-                      {(product.colorOptions || product.colors).map((color) => {
-                        const isHex = /^#([0-9A-F]{3}){1,2}$/i.test(color) || /^(rgb|hsl)/i.test(color);
-                        if (isHex) {
-                          return (
-                            <button
-                              key={color}
-                              onClick={() => setSelectedColor(color)}
-                              className={`w-10 h-10 rounded-full border-2 ${
-                                selectedColor === color ? 'border-gray-900' : 'border-gray-300'
-                              }`}
-                              style={{ backgroundColor: color }}
-                              title={color}
-                            />
-                          );
-                        }
+                      {colorChoices.map((variant) => {
+                        const isSelected = selectedColor?.toLowerCase() === variant.color.toLowerCase();
+                        const cssColor = swatchCssColor(variant);
+                        const thumb = variant.images?.[0];
                         return (
                           <button
-                            key={color}
-                            onClick={() => setSelectedColor(color)}
-                            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                              selectedColor === color
-                                ? 'border-gray-900 bg-gray-900 text-white'
-                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
+                            key={variant.color}
+                            type="button"
+                            title={variant.color}
+                            onClick={() => {
+                              setSelectedColor(variant.color);
+                              const next = galleryForColor(product, variant.color);
+                              if (next[0]) setMainImage(next[0]);
+                            }}
+                            className={`w-10 h-10 rounded-full border-2 overflow-hidden ${
+                              isSelected ? 'border-gray-900' : 'border-gray-300'
                             }`}
+                            style={!thumb && cssColor ? { backgroundColor: cssColor } : undefined}
                           >
-                            {color}
+                            {thumb ? (
+                              <img src={thumb} alt={variant.color} className="w-full h-full object-cover" />
+                            ) : !cssColor ? (
+                              <span className="text-[9px] leading-none">{variant.color.slice(0, 3)}</span>
+                            ) : null}
                           </button>
                         );
                       })}
@@ -235,15 +260,17 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
                 <div className="flex gap-3">
                   <button
                     onClick={handleAddToCart}
-                    disabled={alreadyInCart}
+                    disabled={alreadyInCart || outOfStock}
                     className={`flex-1 px-6 py-3 rounded-lg flex items-center justify-center gap-2 ${
                       alreadyInCart
                         ? 'bg-green-100 text-green-800 border border-green-200 cursor-not-allowed'
-                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                        : outOfStock
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-900 text-white hover:bg-gray-800'
                     }`}
                   >
                     <ShoppingCart className="w-5 h-5" />
-                    {alreadyInCart ? 'Already in Cart' : 'Add to Cart'}
+                    {alreadyInCart ? 'Already in Cart' : outOfStock ? 'Out of stock' : 'Add to Cart'}
                   </button>
                   <button
                     onClick={handleWishlistToggle}
@@ -258,7 +285,7 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
                 </div>
 
                 <Link
-                  to={`/product/${product.category || 'product'}/${product._id || product.id}`}
+                  to={`/product/${product._id || product.id}${selectedColor ? `?color=${encodeURIComponent(colorSlug(selectedColor))}` : ''}`}
                   onClick={onClose}
                   className="block mt-4 text-center text-sm text-gray-600 hover:text-gray-900 underline"
                 >
