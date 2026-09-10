@@ -36,7 +36,7 @@ const ColorVariantsEditor = ({ variants, onChange }) => {
         Color-Specific Image Variants (Amazon / Flipkart Style)
       </label>
       <p className="text-xs text-gray-500 mb-2">
-        Each color needs a name and at least one image. Optional hex, stock, and price fall back to the product defaults if left blank.
+        Each color needs its own photos. Type the color name on a row and upload images for that color only — do not rely on the comma-separated list above. Those names stay after save, including when you edit the product later.
       </p>
       {list.map((variant, idx) => (
         <div key={idx} className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">

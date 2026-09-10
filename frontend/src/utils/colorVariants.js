@@ -99,8 +99,14 @@ export const collectImagesFromVariants = (list) => {
   return images;
 };
 
+export const storedColorVariants = (product) =>
+  mergeVariantsByColor([
+    ...asArray(product?.colorVariants),
+    ...asArray(product?.productDetails?.colorVariants),
+  ]);
+
 export const listProductColorVariants = (product) => {
-  const fromVariants = mergeVariantsByColor(asArray(product?.colorVariants));
+  const fromVariants = storedColorVariants(product);
   const names = new Set(fromVariants.map((v) => colorSlug(v.color)));
   const extras = uniqueColorNames(
     asArray(product?.colorOptions || product?.colors || (product?.color ? [product.color] : []))
@@ -154,6 +160,12 @@ export const productSnapshotForCart = (product, selectedColor) => {
 };
 
 export const galleryForColor = (product, selectedColor) => {
+  const stored = storedColorVariants(product);
+  const activeStored = stored.find((v) => colorsMatch(v.color, selectedColor));
+  if (activeStored) {
+    return variantGalleryImages(activeStored);
+  }
+
   const active = findVariantByColor(product, selectedColor);
   const variantImgs = variantGalleryImages(active);
   if (variantImgs.length) return variantImgs;
@@ -188,29 +200,43 @@ export const emptyAdminColorVariant = () => ({
   price: '',
 });
 
-export const toAdminColorVariants = (raw) => {
-  const list = (Array.isArray(raw) ? raw : []).map(normalizeColorVariant).filter(Boolean);
-  if (!list.length) return [emptyAdminColorVariant()];
-  return list.map((v) => ({
-    color: v.color,
-    hex: v.hex || '',
-    image: v.image || '',
-    images: v.images || [],
-    stock: v.stock === null || v.stock === undefined ? '' : v.stock,
-    price: v.price === null || v.price === undefined ? '' : v.price,
-  }));
+export const toAdminColorVariants = (raw, extraNames = []) => {
+  const stored = mergeVariantsByColor(Array.isArray(raw) ? raw : []);
+  const names = uniqueColorNames([...stored.map((v) => v.color), ...asArray(extraNames)]);
+  if (!names.length) return [emptyAdminColorVariant()];
+  return names.map((color) => {
+    const v = stored.find((item) => colorsMatch(item.color, color)) || {
+      color,
+      hex: '',
+      image: '',
+      images: [],
+      stock: null,
+      price: null,
+    };
+    return {
+      color: v.color,
+      hex: v.hex || '',
+      image: v.image || '',
+      images: v.images || [],
+      stock: v.stock === null || v.stock === undefined ? '' : v.stock,
+      price: v.price === null || v.price === undefined ? '' : v.price,
+    };
+  });
 };
 
-export const buildColorVariantsPayload = (list, fallbackImages = []) =>
+export const toAdminColorVariantsFromProduct = (product) =>
+  toAdminColorVariants(storedColorVariants(product), product?.colorOptions || []);
+
+/** Do not copy the product gallery onto every color — that makes every swatch show the same photos. */
+export const buildColorVariantsPayload = (list) =>
   mergeVariantsByColor(list)
     .map((n) => {
       if (!n.color && !n.images.length) return null;
-      const images = n.images?.length ? n.images : [...fallbackImages].filter(Boolean);
       const payload = {
         color: n.color,
         hex: n.hex || '',
-        image: images[0] || '',
-        images,
+        image: n.images[0] || '',
+        images: n.images || [],
       };
       if (n.stock !== null && n.stock !== undefined) payload.stock = n.stock;
       if (n.price !== null && n.price !== undefined) payload.price = n.price;
