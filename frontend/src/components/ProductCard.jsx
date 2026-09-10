@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import LoginModal from './LoginModal';
 import { handleImageError } from '../utils/imageFallback';
+import { listProductColorVariants, colorSlug, swatchCssColor } from '../utils/colorVariants';
 
 const ProductCard = ({ product }) => {
   const { addToCart, isProductInCart } = useCart();
@@ -19,6 +20,8 @@ const ProductCard = ({ product }) => {
   const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
   const [shouldLoadHoverImage, setShouldLoadHoverImage] = useState(false);
   const [cartSuccessPopup, setCartSuccessPopup] = useState(false);
+
+  const [previewVariant, setPreviewVariant] = useState(null);
 
   // Data Normalization - support array, object { image1, image2, ... }, or single image/thumbnail
   let productImages = [];
@@ -99,6 +102,14 @@ const ProductCard = ({ product }) => {
     }
   }
 
+  const colorChoices = listProductColorVariants(product);
+  const previewImage = previewVariant?.images?.[0];
+  if (previewImage) {
+    defaultImageSrc = previewImage;
+    hoverImageSrc = previewVariant.images?.[1] || hoverImageSrc;
+  }
+  const productHref = `/product/${productId}${previewVariant ? `?color=${encodeURIComponent(colorSlug(previewVariant.color))}` : ''}`;
+
   const handleAddClick = (e) => {
     e.preventDefault();
     e.stopPropagation(); 
@@ -167,7 +178,7 @@ const ProductCard = ({ product }) => {
           setShowSizes(false);
         }}
       >
-        <Link to={`/product/${productId}`} className="flex flex-col flex-1">
+        <Link to={productHref} className="flex flex-col flex-1">
           
           {/* IMAGE AREA */}
           <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
@@ -217,7 +228,7 @@ const ProductCard = ({ product }) => {
                 className={`
                   absolute inset-0 w-full h-full object-cover transition-all duration-500
                   ${imageLoaded ? 'opacity-100' : 'opacity-0'}
-                  ${isHovered && hoverImageSrc && hoverImageLoaded ? 'opacity-0' : 'opacity-100'}
+                  ${isHovered && hoverImageSrc && hoverImageLoaded && !previewVariant ? 'opacity-0' : 'opacity-100'}
                 `}
                 onError={handleImageError}
               />
@@ -239,13 +250,48 @@ const ProductCard = ({ product }) => {
                   alt={product.name || product.title || 'Product'}
                   className={`
                     absolute inset-0 w-full h-full object-cover transition-opacity duration-500
-                    ${isHovered && hoverImageLoaded ? 'opacity-100' : 'opacity-0'}
+                    ${isHovered && hoverImageLoaded && !previewVariant ? 'opacity-100' : 'opacity-0'}
                   `}
                   loading="lazy"
                   decoding="async"
                   onError={handleImageError}
                 />
               </>
+            )}
+
+            {colorChoices.length > 1 && (
+              <div
+                className="absolute bottom-2 left-2 right-2 z-20 flex flex-wrap gap-1"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              >
+                {colorChoices.slice(0, 6).map((variant) => {
+                  const cssColor = swatchCssColor(variant);
+                  const thumb = variant.images?.[0];
+                  const isActive = previewVariant && previewVariant.color === variant.color;
+                  return (
+                    <button
+                      key={variant.color}
+                      type="button"
+                      title={variant.color}
+                      onMouseEnter={() => setPreviewVariant(variant)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setPreviewVariant(variant);
+                      }}
+                      className={`w-4 h-4 rounded-full border overflow-hidden shadow-sm ${
+                        isActive ? 'border-gray-900 ring-1 ring-white' : 'border-white'
+                      }`}
+                    >
+                      {thumb ? (
+                        <img src={thumb} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="block w-full h-full" style={{ backgroundColor: cssColor || '#9ca3af' }} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             )}
 
           </div>

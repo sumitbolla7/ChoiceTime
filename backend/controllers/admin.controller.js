@@ -37,6 +37,54 @@ const sanitizeSubCategory = (sub) => {
     .join(', ');
 };
 
+const collectVariantImages = (v) => {
+  const imgs = [];
+  if (Array.isArray(v?.images)) {
+    v.images.forEach((url) => {
+      const s = String(url || '').trim();
+      if (s && !imgs.includes(s)) imgs.push(s);
+    });
+  }
+  const single = String(v?.image || '').trim();
+  if (single && !imgs.includes(single)) imgs.unshift(single);
+  return imgs;
+};
+
+/** Empty array is allowed. If any variants are sent, each needs a name and at least one image. */
+const sanitizeColorVariants = (raw) => {
+  if (raw === undefined) return { skip: true };
+  if (!Array.isArray(raw)) return { error: 'colorVariants must be an array' };
+  const variants = [];
+  for (const v of raw) {
+    if (!v || typeof v !== 'object') continue;
+    const color = String(v.color || '').trim();
+    const images = collectVariantImages(v);
+    const hex = String(v.hex || '').trim();
+    const hasOptional =
+      hex ||
+      (v.stock !== undefined && v.stock !== null && v.stock !== '') ||
+      (v.price !== undefined && v.price !== null && v.price !== '');
+    if (!color && images.length === 0 && !hasOptional) continue;
+    if (!color) return { error: 'Each color variant needs a color name' };
+    if (images.length === 0) {
+      return { error: `Color "${color}" needs at least one image` };
+    }
+    const item = { color, hex, image: images[0], images };
+    if (v.stock !== undefined && v.stock !== null && v.stock !== '') {
+      const n = Number(v.stock);
+      if (Number.isNaN(n) || n < 0) return { error: `Invalid stock for color "${color}"` };
+      item.stock = n;
+    }
+    if (v.price !== undefined && v.price !== null && v.price !== '') {
+      const n = Number(v.price);
+      if (Number.isNaN(n) || n < 0) return { error: `Invalid price for color "${color}"` };
+      item.price = n;
+    }
+    variants.push(item);
+  }
+  return { variants };
+};
+
 const parseBooleanFlag = (value) => {
   if (value === true || value === 'true' || value === 1 || value === '1') return true;
   if (value === false || value === 'false' || value === 0 || value === '0') return false;
@@ -271,6 +319,10 @@ export const createProduct = async (req, res) => {
     const originalPrice = Number(productData.originalPrice ?? productData.price ?? 0);
     const stockNum = Number(productData.stock ?? 0);
     const imagesArr = Array.isArray(productData.images) ? productData.images : [];
+    const variantResult = sanitizeColorVariants(productData.colorVariants);
+    if (variantResult.error) {
+      return res.status(400).json({ success: false, message: variantResult.error });
+    }
     const inferredGender = inferGenderFromCategory(cat, productData.gender);
     const createPayload = {
       name: (productData.name || '').trim(),
@@ -297,7 +349,7 @@ export const createProduct = async (req, res) => {
       ...(productData.thumbnail && { thumbnail: productData.thumbnail }),
       ...(productData.color && { color: productData.color }),
       ...(productData.colorOptions && { colorOptions: productData.colorOptions }),
-        ...(productData.colorVariants && { colorVariants: productData.colorVariants }),
+      ...(!variantResult.skip && { colorVariants: variantResult.variants }),
       ...(productData.boxOptions && { boxOptions: productData.boxOptions }),
       ...(productData.productDetails && { productDetails: productData.productDetails }),
       // Page position fields
@@ -388,7 +440,13 @@ export const updateProduct = async (req, res) => {
     }
 
     if (productData.colorOptions !== undefined) updatePayload.colorOptions = productData.colorOptions;
-    if (productData.colorVariants !== undefined) updatePayload.colorVariants = productData.colorVariants;
+    if (productData.colorVariants !== undefined) {
+      const variantResult = sanitizeColorVariants(productData.colorVariants);
+      if (variantResult.error) {
+        return res.status(400).json({ success: false, message: variantResult.error });
+      }
+      updatePayload.colorVariants = variantResult.variants;
+    }
     if (productData.boxOptions !== undefined) updatePayload.boxOptions = productData.boxOptions;
     if (productData.pageNumberAll !== undefined) updatePayload.pageNumberAll = Number(productData.pageNumberAll ?? 0);
     if (productData.pageNumberCategory !== undefined) {
