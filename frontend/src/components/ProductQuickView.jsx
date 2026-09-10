@@ -180,7 +180,7 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
                     <div className="flex gap-2 flex-wrap">
                       {colorChoices.map((variant) => {
-                        const isSelected = selectedColor?.toLowerCase() === variant.color.toLowerCase();
+                        const isSelected = selectedColor?.toLowerCase() === variant.color?.toLowerCase();
                         const cssColor = swatchCssColor(variant);
                         const thumb = variant.images?.[0];
                         return (

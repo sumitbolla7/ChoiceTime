@@ -45,12 +45,14 @@ export const colorSlug = (name) =>
 export const colorsMatch = (a, b) =>
   colorSlug(a) === colorSlug(b) && Boolean(colorSlug(a));
 
+const asArray = (value) => (Array.isArray(value) ? value : []);
+
 export const listProductColorVariants = (product) => {
-  const fromVariants = (product?.colorVariants || [])
+  const fromVariants = asArray(product?.colorVariants)
     .map(normalizeColorVariant)
     .filter((v) => v && v.color);
   const names = new Set(fromVariants.map((v) => colorSlug(v.color)));
-  const extras = (product?.colorOptions || product?.colors || (product?.color ? [product.color] : []))
+  const extras = asArray(product?.colorOptions || product?.colors || (product?.color ? [product.color] : []))
     .filter(Boolean)
     .map((c) => (typeof c === 'string' ? c : c?.color))
     .filter(Boolean)
@@ -108,8 +110,16 @@ export const galleryForColor = (product, selectedColor) => {
   let mainImages = [];
   if (Array.isArray(product?.images) && product.images.length > 0) {
     mainImages = product.images.filter((img) => img && typeof img === 'string' && img.trim() !== '');
+  } else if (product?.images && typeof product.images === 'object') {
+    const keys = Object.keys(product.images).filter(
+      (k) => product.images[k] && typeof product.images[k] === 'string' && product.images[k].trim() !== ''
+    );
+    mainImages = keys.map((k) => product.images[k].trim());
   } else if (product?.image || product?.thumbnail) {
-    mainImages = [product.image || product.thumbnail];
+    const fallback = product.image || product.thumbnail;
+    if (fallback && typeof fallback === 'string' && fallback.trim() !== '') {
+      mainImages = [fallback.trim()];
+    }
   }
   if (mainImages.length === 0) {
     const fallback = listProductColorVariants(product).flatMap((v) => v.images || []);

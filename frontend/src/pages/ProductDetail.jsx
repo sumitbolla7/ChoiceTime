@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import LoginModal from '../components/LoginModal';
 import ProductCard from '../components/ProductCard';
-import { handleImageError } from '../utils/imageFallback';
+import { handleImageError, getPlaceholderImage } from '../utils/imageFallback';
 import { productAPI, reviewAPI, shippingReturnAPI } from '../utils/api';
 import {
   pickDefaultColor,
