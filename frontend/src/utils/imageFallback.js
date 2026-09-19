@@ -5,45 +5,79 @@ export const getPlaceholderImage = (width = 400, height = 400) => {
 };
 
 /**
- * 4-Tier Automatic Image CDN Failover:
- * Tier 1: pyd0fawt1 (Primary ImageKit)
- * Tier 2: sumitbvalorant (Secondary ImageKit)
- * Tier 3: l6od6mlo3j (Legacy ImageKit)
- * Tier 4: Cloudinary (dndqnoxqg)
+ * Multi-Tier Automatic Image CDN Failover:
+ * Switches between ImageKit accounts dynamically if bandwidth limit (429) or missing file occurs.
+ * Accounts:
+ * - pyd0fawt1 (Primary Working ImageKit)
+ * - sumitbvalorant (Secondary ImageKit)
+ * - l6od6mlo3j (Legacy ImageKit)
+ * - Cloudinary (dndqnoxqg)
  * Final: SVG Placeholder
  */
 export const handleImageError = (e, width = 400, height = 400) => {
-  const currentSrc = e.target?.src || '';
+  const img = e.target;
+  if (!img) return;
+
+  const currentSrc = img.src || '';
 
   // Prevent infinite loop if already using SVG placeholder
   if (currentSrc.startsWith('data:image/svg+xml')) {
     return;
   }
 
-  // Tier 1 -> Tier 2: If pyd0fawt1 fails / limit reached, switch to sumitbvalorant
-  if (currentSrc.includes('ik.imagekit.io/pyd0fawt1')) {
-    e.target.src = currentSrc.replace('ik.imagekit.io/pyd0fawt1', 'ik.imagekit.io/sumitbvalorant');
+  // Track already tried CDN endpoints on this img element attribute
+  const triedStr = img.getAttribute('data-tried-cdn') || '';
+  const tried = triedStr ? triedStr.split(',') : [];
+
+  // Determine current endpoint
+  let currentEp = '';
+  if (currentSrc.includes('ik.imagekit.io/sumitbvalorant')) currentEp = 'sumitbvalorant';
+  else if (currentSrc.includes('ik.imagekit.io/pyd0fawt1')) currentEp = 'pyd0fawt1';
+  else if (currentSrc.includes('ik.imagekit.io/l6od6mlo3j')) currentEp = 'l6od6mlo3j';
+  else if (currentSrc.includes('cloudinary')) currentEp = 'cloudinary';
+
+  if (currentEp && !tried.includes(currentEp)) {
+    tried.push(currentEp);
+  }
+
+  // Failover 1: If sumitbvalorant fails (e.g. 429 rate limit), try pyd0fawt1
+  if (currentSrc.includes('ik.imagekit.io/sumitbvalorant') && !tried.includes('pyd0fawt1')) {
+    tried.push('pyd0fawt1');
+    img.setAttribute('data-tried-cdn', tried.join(','));
+    img.src = currentSrc.replace('ik.imagekit.io/sumitbvalorant', 'ik.imagekit.io/pyd0fawt1');
     return;
   }
 
-  // Tier 2 -> Tier 3: If sumitbvalorant fails, switch to l6od6mlo3j
-  if (currentSrc.includes('ik.imagekit.io/sumitbvalorant')) {
-    e.target.src = currentSrc.replace('ik.imagekit.io/sumitbvalorant', 'ik.imagekit.io/l6od6mlo3j');
+  // Failover 2: If pyd0fawt1 fails, try sumitbvalorant
+  if (currentSrc.includes('ik.imagekit.io/pyd0fawt1') && !tried.includes('sumitbvalorant')) {
+    tried.push('sumitbvalorant');
+    img.setAttribute('data-tried-cdn', tried.join(','));
+    img.src = currentSrc.replace('ik.imagekit.io/pyd0fawt1', 'ik.imagekit.io/sumitbvalorant');
     return;
   }
 
-  // Tier 3 -> Tier 4: If l6od6mlo3j fails, try Cloudinary backup
-  if (currentSrc.includes('ik.imagekit.io/l6od6mlo3j')) {
+  // Failover 3: If both primary ImageKit accounts fail, try l6od6mlo3j
+  if (!tried.includes('l6od6mlo3j')) {
+    tried.push('l6od6mlo3j');
+    img.setAttribute('data-tried-cdn', tried.join(','));
+    img.src = currentSrc.replace(/ik\.imagekit\.io\/(pyd0fawt1|sumitbvalorant)/, 'ik.imagekit.io/l6od6mlo3j');
+    return;
+  }
+
+  // Failover 4: Try Cloudinary backup
+  if (!tried.includes('cloudinary')) {
+    tried.push('cloudinary');
+    img.setAttribute('data-tried-cdn', tried.join(','));
     const urlParts = currentSrc.split('/');
     const fileName = urlParts[urlParts.length - 1] || '';
     const baseName = fileName.split('.')[0].split('_')[0];
     if (baseName && !baseName.startsWith('data:')) {
-      e.target.src = `https://res.cloudinary.com/dndqnoxqg/image/upload/${baseName}.jpg`;
+      img.src = `https://res.cloudinary.com/dndqnoxqg/image/upload/${baseName}.jpg`;
       return;
     }
   }
 
-  // Final: SVG "No Image" placeholder
-  e.target.onerror = null;
-  e.target.src = getPlaceholderImage(width, height);
+  // Final fallback: SVG "No Image" placeholder
+  img.onerror = null;
+  img.src = getPlaceholderImage(width, height);
 };

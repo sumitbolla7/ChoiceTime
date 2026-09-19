@@ -285,7 +285,7 @@ const ProductCard = ({ product }) => {
                       }`}
                     >
                       {thumb ? (
-                        <img src={thumb} alt="" className="w-full h-full object-cover" />
+                        <img src={thumb} alt="" className="w-full h-full object-cover" onError={handleImageError} />
                       ) : (
                         <span className="block w-full h-full" style={{ backgroundColor: cssColor || '#9ca3af' }} />
                       )}
