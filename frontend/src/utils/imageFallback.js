@@ -5,73 +5,80 @@ export const getPlaceholderImage = (width = 400, height = 400) => {
 };
 
 /**
- * Multi-Tier Automatic Image CDN Failover:
- * Switches between ImageKit accounts dynamically if bandwidth limit (429) or missing file occurs.
- * Accounts:
- * - pyd0fawt1 (Primary Working ImageKit)
- * - sumitbvalorant (Secondary ImageKit)
- * - l6od6mlo3j (Legacy ImageKit)
- * - Cloudinary (dndqnoxqg)
- * Final: SVG Placeholder
+ * 5-Tier Automatic Image CDN Failover.
+ * When one ImageKit account hits its monthly bandwidth limit (HTTP 429),
+ * the next account is tried automatically.
+ *
+ * Failover order (per image):
+ *   sumitbvalorant → pyd0fawt1 → sujatha8979 → l6od6mlo3j → Cloudinary → SVG placeholder
+ *
+ * All accounts store copies of the same images.
+ * data-tried-cdn attribute tracks which accounts were already attempted
+ * on each <img> element so we never loop.
  */
+
+// All known ImageKit account IDs in priority order
+const IK_ACCOUNTS = [
+  'sumitbvalorant',  // Primary (1,542 images)
+  'pyd0fawt1',       // Secondary (active, has some images)
+  'sujatha8979',     // Tertiary (fresh bandwidth — new account added Sep 2026)
+  'l6od6mlo3j',      // Legacy
+];
+
+/**
+ * Extract the ImageKit account ID from an image URL.
+ * Returns '' if not an ImageKit URL.
+ */
+function getIkAccount(src) {
+  const m = src.match(/ik\.imagekit\.io\/([^/]+)\//);
+  return m ? m[1] : '';
+}
+
+/**
+ * Replace the ImageKit account ID in a URL.
+ */
+function swapIkAccount(src, newAccount) {
+  return src.replace(/ik\.imagekit\.io\/[^/]+\//, `ik.imagekit.io/${newAccount}/`);
+}
+
 export const handleImageError = (e, width = 400, height = 400) => {
   const img = e.target;
   if (!img) return;
 
   const currentSrc = img.src || '';
 
-  // Prevent infinite loop if already using SVG placeholder
-  if (currentSrc.startsWith('data:image/svg+xml')) {
-    return;
-  }
+  // Prevent infinite loop on SVG placeholder
+  if (currentSrc.startsWith('data:image/svg+xml')) return;
 
-  // Track already tried CDN endpoints on this img element attribute
+  // Track which CDN endpoints have already been tried for this <img>
   const triedStr = img.getAttribute('data-tried-cdn') || '';
-  const tried = triedStr ? triedStr.split(',') : [];
+  const tried = new Set(triedStr ? triedStr.split(',') : []);
 
-  // Determine current endpoint
-  let currentEp = '';
-  if (currentSrc.includes('ik.imagekit.io/sumitbvalorant')) currentEp = 'sumitbvalorant';
-  else if (currentSrc.includes('ik.imagekit.io/pyd0fawt1')) currentEp = 'pyd0fawt1';
-  else if (currentSrc.includes('ik.imagekit.io/l6od6mlo3j')) currentEp = 'l6od6mlo3j';
-  else if (currentSrc.includes('cloudinary')) currentEp = 'cloudinary';
+  const currentAccount = getIkAccount(currentSrc);
 
-  if (currentEp && !tried.includes(currentEp)) {
-    tried.push(currentEp);
+  // Mark current account as tried
+  if (currentAccount) tried.add(currentAccount);
+
+  // Try next ImageKit account that hasn't been attempted yet
+  for (const account of IK_ACCOUNTS) {
+    if (!tried.has(account)) {
+      tried.add(account);
+      img.setAttribute('data-tried-cdn', [...tried].join(','));
+      img.src = currentSrc.includes('ik.imagekit.io/')
+        ? swapIkAccount(currentSrc, account)
+        : `https://ik.imagekit.io/${account}/${currentSrc.split('/').pop()}`;
+      return;
+    }
   }
 
-  // Failover 1: If sumitbvalorant fails (e.g. 429 rate limit), try pyd0fawt1
-  if (currentSrc.includes('ik.imagekit.io/sumitbvalorant') && !tried.includes('pyd0fawt1')) {
-    tried.push('pyd0fawt1');
-    img.setAttribute('data-tried-cdn', tried.join(','));
-    img.src = currentSrc.replace('ik.imagekit.io/sumitbvalorant', 'ik.imagekit.io/pyd0fawt1');
-    return;
-  }
-
-  // Failover 2: If pyd0fawt1 fails, try sumitbvalorant
-  if (currentSrc.includes('ik.imagekit.io/pyd0fawt1') && !tried.includes('sumitbvalorant')) {
-    tried.push('sumitbvalorant');
-    img.setAttribute('data-tried-cdn', tried.join(','));
-    img.src = currentSrc.replace('ik.imagekit.io/pyd0fawt1', 'ik.imagekit.io/sumitbvalorant');
-    return;
-  }
-
-  // Failover 3: If both primary ImageKit accounts fail, try l6od6mlo3j
-  if (!tried.includes('l6od6mlo3j')) {
-    tried.push('l6od6mlo3j');
-    img.setAttribute('data-tried-cdn', tried.join(','));
-    img.src = currentSrc.replace(/ik\.imagekit\.io\/(pyd0fawt1|sumitbvalorant)/, 'ik.imagekit.io/l6od6mlo3j');
-    return;
-  }
-
-  // Failover 4: Try Cloudinary backup
-  if (!tried.includes('cloudinary')) {
-    tried.push('cloudinary');
-    img.setAttribute('data-tried-cdn', tried.join(','));
+  // All ImageKit accounts failed — try Cloudinary
+  if (!tried.has('cloudinary')) {
+    tried.add('cloudinary');
+    img.setAttribute('data-tried-cdn', [...tried].join(','));
     const urlParts = currentSrc.split('/');
     const fileName = urlParts[urlParts.length - 1] || '';
-    const baseName = fileName.split('.')[0].split('_')[0];
-    if (baseName && !baseName.startsWith('data:')) {
+    const baseName = fileName.split('?')[0].split('.')[0].split('_')[0];
+    if (baseName && !baseName.startsWith('data:') && baseName.length > 3) {
       img.src = `https://res.cloudinary.com/dndqnoxqg/image/upload/${baseName}.jpg`;
       return;
     }
