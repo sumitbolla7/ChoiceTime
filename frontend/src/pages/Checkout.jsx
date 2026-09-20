@@ -214,7 +214,6 @@ const Checkout = () => {
   };
 
   const handlePayment = async () => {
-    console.log('Payment handler called with method:', paymentMethod);
     
     if (!shippingAddress.name || !shippingAddress.phone || !shippingAddress.address || !shippingAddress.city) {
       setError('Please fill in all required shipping address fields');
@@ -257,26 +256,6 @@ const Checkout = () => {
     }
   };
 
-
-          setProcessingStep(0);
-          setError('Advance payment cancelled. Please try again.');
-        },
-      },
-    };
-
-    const razorpay = new window.Razorpay(options);
-    razorpay.on('payment.failed', function (response) {
-      setError(`Advance payment failed: ${response.error.description}`);
-      setLoading(false);
-      setIsPlacingOrder(false);
-      setIsProcessingOrder(false);
-      setProcessingStep(0);
-    });
-    razorpay.open();
-    // Razorpay modal is open — release checkout UI (button was disabled via isPlacingOrder)
-    setLoading(false);
-    setIsPlacingOrder(false);
-  };
 
   const handleOnlinePayment = async () => {
     const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
