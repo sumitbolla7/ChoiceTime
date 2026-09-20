@@ -5,6 +5,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ToastContainer';
 import { Link } from 'react-router-dom';
+import { getLiveImageUrl, handleImageError } from '../utils/imageFallback';
 import {
   listProductColorVariants,
   pickDefaultColor,
@@ -118,7 +119,7 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
               {/* Images */}
               <div>
                 <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
-                  <img src={mainImage || galleryImages[0]} alt={product.name} className="w-full h-full object-cover" />
+                  <img src={getLiveImageUrl(mainImage || galleryImages[0])} alt={product.name} className="w-full h-full object-cover" onError={handleImageError} />
                 </div>
                 {galleryImages.length > 1 && (
                   <div className="flex gap-2 overflow-x-auto">
@@ -130,7 +131,7 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
                           mainImage === img ? 'border-gray-900' : 'border-gray-200'
                         }`}
                       >
-                        <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover" />
+                        <img src={getLiveImageUrl(img)} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover" onError={handleImageError} />
                       </button>
                     ))}
                   </div>
@@ -199,7 +200,7 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
                             style={!thumb && cssColor ? { backgroundColor: cssColor } : undefined}
                           >
                             {thumb ? (
-                              <img src={thumb} alt={variant.color} className="w-full h-full object-cover" />
+                              <img src={getLiveImageUrl(thumb)} alt={variant.color} className="w-full h-full object-cover" onError={handleImageError} />
                             ) : !cssColor ? (
                               <span className="text-[9px] leading-none">{variant.color.slice(0, 3)}</span>
                             ) : null}

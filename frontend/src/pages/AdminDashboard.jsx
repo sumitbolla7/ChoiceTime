@@ -13,6 +13,7 @@ import {
   hasSubCategoryOption,
   subCategoryToPayload,
 } from '../utils/subCategory';
+import { getLiveImageUrl, handleImageError } from '../utils/imageFallback';
 import ColorVariantsEditor from '../components/ColorVariantsEditor';
 import {
   buildColorVariantsPayload,
@@ -1859,12 +1860,10 @@ const AdminDashboard = () => {
                               <td className="px-4 py-3">
                                 {imageUrl ? (
                                   <img
-                                    src={imageUrl}
+                                    src={getLiveImageUrl(imageUrl)}
                                     alt={product.name || product.title || 'Product'}
                                     className="w-14 h-14 object-cover rounded-lg border"
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                    }}
+                                    onError={(e) => handleImageError(e, 56, 56)}
                                   />
                                 ) : (
                                   <div className="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -2264,7 +2263,7 @@ const AdminDashboard = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3">
                     {uploadedImageUrls.map((url, index) => (
                       <div key={index} className="relative group rounded-lg overflow-hidden border bg-gray-50">
-                        <img src={url} alt={`Product ${index + 1}`} className="w-full h-24 object-cover" />
+                        <img src={getLiveImageUrl(url)} alt={`Product ${index + 1}`} className="w-full h-24 object-cover" onError={handleImageError} />
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(index)}
@@ -2882,7 +2881,7 @@ const AdminDashboard = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3">
                       {uploadedImageUrls.map((url, index) => (
                         <div key={index} className="relative group rounded-lg overflow-hidden border bg-gray-50">
-                          <img src={url} alt={`Product ${index + 1}`} className="w-full h-24 object-cover" />
+                          <img src={getLiveImageUrl(url)} alt={`Product ${index + 1}`} className="w-full h-24 object-cover" onError={handleImageError} />
                           <button
                             type="button"
                             onClick={() => handleRemoveImage(index)}
@@ -3261,12 +3260,10 @@ const AdminDashboard = () => {
                                 <td className="px-4 py-3">
                                   {imageUrl ? (
                                     <img
-                                      src={imageUrl}
+                                      src={getLiveImageUrl(imageUrl)}
                                       alt={product.name || product.title || 'Product'}
                                       className="w-14 h-14 object-cover rounded-lg border"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                      }}
+                                      onError={(e) => handleImageError(e, 56, 56)}
                                     />
                                   ) : (
                                     <div className="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -3367,12 +3364,10 @@ const AdminDashboard = () => {
                             <td className="px-4 py-3">
                               {imageUrl ? (
                                 <img
-                                  src={imageUrl}
+                                  src={getLiveImageUrl(imageUrl)}
                                   alt={product.name || product.title || 'Product'}
                                   className="w-14 h-14 object-cover rounded-lg border"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                  }}
+                                  onError={(e) => handleImageError(e, 56, 56)}
                                 />
                               ) : (
                                 <div className="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -4158,7 +4153,7 @@ const AdminDashboard = () => {
                               {order.items?.map((item, index) => (
                                 <div key={index} className="border border-gray-200 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                                   {item.product?.images?.[0] ? (
-                                    <img src={item.product.images[0]} alt={item.product.name} className="w-20 h-20 object-cover border border-gray-200 rounded flex-shrink-0" />
+                                    <img src={getLiveImageUrl(item.product.images[0])} alt={item.product.name} className="w-20 h-20 object-cover border border-gray-200 rounded flex-shrink-0" onError={handleImageError} />
                                   ) : (
                                     <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded flex-shrink-0 flex items-center justify-center"><span className="text-xs text-gray-400">No Image</span></div>
                                   )}

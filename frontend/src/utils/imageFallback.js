@@ -5,40 +5,51 @@ export const getPlaceholderImage = (width = 400, height = 400) => {
 };
 
 /**
- * 5-Tier Automatic Image CDN Failover.
- * When one ImageKit account hits its monthly bandwidth limit (HTTP 429),
- * the next account is tried automatically.
+ * Image CDN routing:
+ * Serve from sujatha8979 first (fresh bandwidth). If that account is down,
+ * swap to the next ImageKit account that still has the same file path,
+ * then Cloudinary, then a local SVG placeholder.
  *
- * Failover order (per image):
- *   sumitbvalorant → pyd0fawt1 → sujatha8979 → l6od6mlo3j → Cloudinary → SVG placeholder
- *
- * All accounts store copies of the same images.
- * data-tried-cdn attribute tracks which accounts were already attempted
- * on each <img> element so we never loop.
+ *   sujatha8979 → pyd0fawt1 → sumitbvalorant → l6od6mlo3j → Cloudinary → SVG
  */
 
-// All known ImageKit account IDs in priority order
+export const PRIMARY_IK_ACCOUNT = 'sujatha8979';
+
 const IK_ACCOUNTS = [
-  'sumitbvalorant',  // Primary (1,542 images)
-  'pyd0fawt1',       // Secondary (active, has some images)
-  'sujatha8979',     // Tertiary (fresh bandwidth — new account added Sep 2026)
-  'l6od6mlo3j',      // Legacy
+  'sujatha8979',
+  'pyd0fawt1',
+  'sumitbvalorant',
+  'l6od6mlo3j',
 ];
 
-/**
- * Extract the ImageKit account ID from an image URL.
- * Returns '' if not an ImageKit URL.
- */
 function getIkAccount(src) {
-  const m = src.match(/ik\.imagekit\.io\/([^/]+)\//);
+  const m = String(src).match(/ik\.imagekit\.io\/([^/]+)\//);
   return m ? m[1] : '';
 }
 
-/**
- * Replace the ImageKit account ID in a URL.
- */
 function swapIkAccount(src, newAccount) {
-  return src.replace(/ik\.imagekit\.io\/[^/]+\//, `ik.imagekit.io/${newAccount}/`);
+  return String(src).replace(/ik\.imagekit\.io\/[^/]+\//, `ik.imagekit.io/${newAccount}/`);
+}
+
+function fileNameFromSrc(src) {
+  return decodeURIComponent(String(src).split('/').pop().split('?')[0] || '');
+}
+
+/** Point ImageKit URLs at the live (lowest-bandwidth-used) account. */
+export const getLiveImageUrl = (src) => {
+  if (!src || typeof src !== 'string') return src;
+  if (!src.includes('ik.imagekit.io/')) return src;
+  if (src.startsWith('data:')) return src;
+  return swapIkAccount(src, PRIMARY_IK_ACCOUNT);
+};
+
+function extraPathsForAccount(src, account) {
+  const fileName = fileNameFromSrc(src);
+  if (!fileName) return [];
+  return [
+    `https://ik.imagekit.io/${account}/${fileName}`,
+    `https://ik.imagekit.io/${account}/uploads/${fileName}`,
+  ];
 }
 
 export const handleImageError = (e, width = 400, height = 400) => {
@@ -46,45 +57,51 @@ export const handleImageError = (e, width = 400, height = 400) => {
   if (!img) return;
 
   const currentSrc = img.src || '';
-
-  // Prevent infinite loop on SVG placeholder
   if (currentSrc.startsWith('data:image/svg+xml')) return;
 
-  // Track which CDN endpoints have already been tried for this <img>
   const triedStr = img.getAttribute('data-tried-cdn') || '';
   const tried = new Set(triedStr ? triedStr.split(',') : []);
-
-  const currentAccount = getIkAccount(currentSrc);
-
-  // Mark current account as tried
-  if (currentAccount) tried.add(currentAccount);
-
-  // Try next ImageKit account that hasn't been attempted yet
-  for (const account of IK_ACCOUNTS) {
-    if (!tried.has(account)) {
-      tried.add(account);
-      img.setAttribute('data-tried-cdn', [...tried].join(','));
-      img.src = currentSrc.includes('ik.imagekit.io/')
-        ? swapIkAccount(currentSrc, account)
-        : `https://ik.imagekit.io/${account}/${currentSrc.split('/').pop()}`;
-      return;
-    }
+  const originalSrc = img.getAttribute('data-original-src') || currentSrc;
+  if (!img.getAttribute('data-original-src')) {
+    img.setAttribute('data-original-src', originalSrc);
   }
 
-  // All ImageKit accounts failed — try Cloudinary
+  const currentAccount = getIkAccount(currentSrc);
+  if (currentAccount) tried.add(currentAccount);
+
+  const pathTried = img.getAttribute('data-tried-paths') || '';
+  const triedPaths = new Set(pathTried ? pathTried.split('||') : []);
+  triedPaths.add(currentSrc.split('?')[0]);
+
+  for (const account of IK_ACCOUNTS) {
+    const candidates = currentSrc.includes('ik.imagekit.io/')
+      ? [swapIkAccount(originalSrc, account), ...extraPathsForAccount(originalSrc, account)]
+      : extraPathsForAccount(originalSrc, account);
+
+    for (const next of candidates) {
+      const key = next.split('?')[0];
+      if (triedPaths.has(key)) continue;
+      tried.add(account);
+      triedPaths.add(key);
+      img.setAttribute('data-tried-cdn', [...tried].join(','));
+      img.setAttribute('data-tried-paths', [...triedPaths].join('||'));
+      img.src = next;
+      return;
+    }
+    tried.add(account);
+  }
+
   if (!tried.has('cloudinary')) {
     tried.add('cloudinary');
     img.setAttribute('data-tried-cdn', [...tried].join(','));
-    const urlParts = currentSrc.split('/');
-    const fileName = urlParts[urlParts.length - 1] || '';
-    const baseName = fileName.split('?')[0].split('.')[0].split('_')[0];
+    const fileName = fileNameFromSrc(originalSrc);
+    const baseName = fileName.split('.')[0].split('_')[0];
     if (baseName && !baseName.startsWith('data:') && baseName.length > 3) {
       img.src = `https://res.cloudinary.com/dndqnoxqg/image/upload/${baseName}.jpg`;
       return;
     }
   }
 
-  // Final fallback: SVG "No Image" placeholder
   img.onerror = null;
   img.src = getPlaceholderImage(width, height);
 };

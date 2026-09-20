@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { orderAPI, getShippingConfig } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { getLiveImageUrl, handleImageError } from '../utils/imageFallback';
 import { 
   ArrowLeft, 
   Package, 
@@ -349,9 +350,10 @@ const OrderDetail = () => {
                       {productImage && (
                         <div className="w-20 h-20 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
                           <img
-                            src={productImage}
+                            src={getLiveImageUrl(productImage)}
                             alt={productName}
                             className="w-full h-full object-cover"
+                            onError={(e) => handleImageError(e, 80, 80)}
                           />
                         </div>
                       )}

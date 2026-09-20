@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { couponAPI, getShippingConfig as getShippingConfigAPI } from '../utils/api';
-import { handleImageError } from '../utils/imageFallback';
+import { handleImageError, getLiveImageUrl } from '../utils/imageFallback';
 
 // --- Premium Icons ---
 const IconTrash = (props) => (
@@ -277,7 +277,7 @@ const Cart = () => {
                         <div className="sm:col-span-6 flex gap-4">
                           <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden border border-gray-200">
                             <img
-                              src={productImage}
+                              src={getLiveImageUrl(productImage)}
                               alt={product.name || 'Product'}
                               className="w-full h-full object-cover"
                               onError={(e) => handleImageError(e, 200, 200)}

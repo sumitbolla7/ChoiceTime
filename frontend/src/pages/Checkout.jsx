@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { paymentAPI, profileAPI, orderAPI, getShippingConfig as getShippingConfigAPI, couponAPI } from '../utils/api';
 import { loadScript } from '../utils/razorpay';
 import { Check, FileText } from 'lucide-react';
+import { getLiveImageUrl, handleImageError } from '../utils/imageFallback';
 
 const Checkout = () => {
   const { cart, getCartTotal, clearCart } = useCart();
@@ -951,9 +952,10 @@ const Checkout = () => {
                       {product.images?.[0] && (
                         <div className="w-16 h-16 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden border border-gray-200">
                           <img
-                            src={product.images[0]}
+                            src={getLiveImageUrl(product.images[0])}
                             alt={product.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => handleImageError(e, 64, 64)}
                           />
                         </div>
                       )}

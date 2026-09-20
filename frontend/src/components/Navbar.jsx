@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import { categoriesAPI } from '../utils/api';
+import { getLiveImageUrl, handleImageError } from '../utils/imageFallback';
 
 const Navbar = () => {
   // Context
@@ -178,12 +179,13 @@ const Navbar = () => {
               <div className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2">
                 <Link to="/" onClick={scrollToTop} className="flex-shrink-0 group relative z-10">
                   <img
-                    src="https://ik.imagekit.io/sumitbvalorant/ChatGPT%20Image%20Aug%2024,%202026,%2003_16_38%20PM.png"
+                    src={getLiveImageUrl("https://ik.imagekit.io/sumitbvalorant/ChatGPT%20Image%20Aug%2024,%202026,%2003_16_38%20PM.png")}
                     alt="choicetime"
                     className="h-10 md:h-14 w-auto object-contain"
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
+                    onError={(e) => handleImageError(e, 160, 56)}
                   />
                 </Link>
               </div>
@@ -429,11 +431,12 @@ const Navbar = () => {
             <div className="flex items-center gap-3">
               <Link to="/" onClick={() => { setIsMobileMenuOpen(false); scrollToTop(); }}>
                 <img
-                  src="https://ik.imagekit.io/sumitbvalorant/ChatGPT%20Image%20Aug%2024,%202026,%2003_16_38%20PM.png"
+                  src={getLiveImageUrl("https://ik.imagekit.io/sumitbvalorant/ChatGPT%20Image%20Aug%2024,%202026,%2003_16_38%20PM.png")}
                   alt="choicetime"
                   className="h-10 w-auto object-contain"
                   loading="eager"
                   decoding="async"
+                  onError={(e) => handleImageError(e, 120, 56)}
                 />
               </Link>
               {isAuthenticated && <p className="text-xs text-gray-500 mt-1">Hello, {user?.name}</p>}

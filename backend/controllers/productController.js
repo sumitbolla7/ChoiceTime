@@ -1,4 +1,5 @@
 import Product from '../models/Product.js';
+import { rewriteProductImages } from '../utils/imageCdn.js';
 
 /**
  * GET /api/products?category=men&subCategory=tshirt&gender=men&limit=100&search=...
@@ -82,13 +83,15 @@ export const getProducts = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        products: products.map((p) => ({
-          ...p,
-          colorVariants:
-            Array.isArray(p.colorVariants) && p.colorVariants.length
-              ? p.colorVariants
-              : p.productDetails?.colorVariants || [],
-        })),
+        products: products.map((p) =>
+          rewriteProductImages({
+            ...p,
+            colorVariants:
+              Array.isArray(p.colorVariants) && p.colorVariants.length
+                ? p.colorVariants
+                : p.productDetails?.colorVariants || [],
+          })
+        ),
         total,
       },
     });
@@ -117,13 +120,13 @@ export const getProductById = async (req, res) => {
         message: 'Product not found',
       });
     }
-    const hydrated = {
+    const hydrated = rewriteProductImages({
       ...product,
       colorVariants:
         Array.isArray(product.colorVariants) && product.colorVariants.length
           ? product.colorVariants
           : product.productDetails?.colorVariants || [],
-    };
+    });
     res.status(200).json({
       success: true,
       data: { product: hydrated },

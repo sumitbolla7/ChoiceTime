@@ -1,5 +1,6 @@
 import { uploadImageToCloudinary } from '../utils/cloudinary';
 import { emptyAdminColorVariant } from '../utils/colorVariants';
+import { getLiveImageUrl, handleImageError } from '../utils/imageFallback';
 
 const hexForColorInput = (hex) => {
   const h = String(hex || '').trim();
@@ -94,7 +95,7 @@ const ColorVariantsEditor = ({ variants, onChange }) => {
           <div className="flex flex-wrap items-center gap-2">
             {(variant.images || []).map((url, imgIdx) => (
               <div key={`${url}-${imgIdx}`} className="relative">
-                <img src={url} alt="" className="w-12 h-12 object-cover rounded border border-gray-300" />
+                <img src={getLiveImageUrl(url)} alt="" className="w-12 h-12 object-cover rounded border border-gray-300" onError={handleImageError} />
                 <button
                   type="button"
                   onClick={() => {

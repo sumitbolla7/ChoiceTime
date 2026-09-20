@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
+import { getLiveImageUrl, handleImageError } from '../../utils/imageFallback';
 
-// Replace this URL with your Raksha Bandan image
-const RAKSHA_BANDAN_IMAGE = 'https://ik.imagekit.io/pyd0fawt1/raksha-bandan-sale?updatedAt=YOUR_TIMESTAMP';
+const RAKSHA_BANDAN_IMAGE = getLiveImageUrl('https://ik.imagekit.io/pyd0fawt1/raksha-bandan-sale');
 
 const RakshabandanSale = () => (
   <div className="relative w-full overflow-hidden bg-brown-50">
@@ -15,6 +15,7 @@ const RakshabandanSale = () => (
           draggable={false}
           loading="lazy"
           decoding="async"
+          onError={(e) => handleImageError(e, 1200, 300)}
         />
       </Link>
     </div>

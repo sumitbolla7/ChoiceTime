@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getLiveImageUrl, handleImageError } from '../utils/imageFallback';
 
 const ImageGallery = ({ images, isOpen, onClose, initialIndex = 0 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -33,9 +34,10 @@ const ImageGallery = ({ images, isOpen, onClose, initialIndex = 0 }) => {
 
         <div className="flex-1 flex items-center justify-center">
           <img
-            src={images[currentIndex]}
+            src={getLiveImageUrl(images[currentIndex])}
             alt={`Image ${currentIndex + 1}`}
             className="max-w-full max-h-[90vh] object-contain"
+            onError={(e) => handleImageError(e, 800, 800)}
           />
         </div>
 
@@ -58,7 +60,7 @@ const ImageGallery = ({ images, isOpen, onClose, initialIndex = 0 }) => {
                 currentIndex === idx ? 'border-white' : 'border-gray-600'
               }`}
             >
-              <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+              <img src={getLiveImageUrl(img)} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" onError={handleImageError} />
             </button>
           ))}
         </div>

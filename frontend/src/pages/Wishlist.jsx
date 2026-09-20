@@ -4,7 +4,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { productAPI } from '../utils/api';
-import { handleImageError } from '../utils/imageFallback';
+import { handleImageError, getLiveImageUrl } from '../utils/imageFallback';
 import { pickDefaultColor, productSnapshotForCart } from '../utils/colorVariants';
 
 const Wishlist = () => {
@@ -189,7 +189,7 @@ const Wishlist = () => {
               <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
                 <Link to={`/product/${product.category || 'product'}/${pid}`}>
                   <img
-                    src={productImage}
+                    src={getLiveImageUrl(productImage)}
                     alt={product.name || 'Product'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     onError={(e) => handleImageError(e, 300, 375)}

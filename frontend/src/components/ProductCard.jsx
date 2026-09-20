@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import LoginModal from './LoginModal';
-import { handleImageError } from '../utils/imageFallback';
+import { handleImageError, getLiveImageUrl } from '../utils/imageFallback';
 import { listProductColorVariants, colorSlug, swatchCssColor, productSnapshotForCart } from '../utils/colorVariants';
 
 const ProductCard = ({ product }) => {
@@ -221,7 +221,7 @@ const ProductCard = ({ product }) => {
             {/* Base Image */}
             {defaultImageSrc && (
               <img
-                src={defaultImageSrc}
+                src={getLiveImageUrl(defaultImageSrc)}
                 alt={product.name || product.title || 'Product'}
                 onLoad={() => setImageLoaded(true)}
                 decoding="async"
@@ -239,7 +239,7 @@ const ProductCard = ({ product }) => {
             {hoverImageSrc && shouldLoadHoverImage && (
               <>
                 <img
-                  src={hoverImageSrc}
+                  src={getLiveImageUrl(hoverImageSrc)}
                   alt=""
                   className="hidden"
                   onLoad={() => setHoverImageLoaded(true)}
@@ -247,7 +247,7 @@ const ProductCard = ({ product }) => {
                   loading="lazy"
                 />
                 <img
-                  src={hoverImageSrc}
+                  src={getLiveImageUrl(hoverImageSrc)}
                   alt={product.name || product.title || 'Product'}
                   className={`
                     absolute inset-0 w-full h-full object-cover transition-opacity duration-500
@@ -285,7 +285,7 @@ const ProductCard = ({ product }) => {
                       }`}
                     >
                       {thumb ? (
-                        <img src={thumb} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+                        <img src={getLiveImageUrl(thumb)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
                       ) : (
                         <span className="block w-full h-full" style={{ backgroundColor: cssColor || '#9ca3af' }} />
                       )}

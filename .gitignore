@@ -60,6 +60,9 @@ uploads/
 public/uploads/
 temp/
 tmp/
+scripts/migration-sujatha8979.json
+scripts/_probe-*.mjs
+scripts/_count-images.mjs
 
 ####################################
 # Cache

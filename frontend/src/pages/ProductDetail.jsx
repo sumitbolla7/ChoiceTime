@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import LoginModal from '../components/LoginModal';
 import ProductCard from '../components/ProductCard';
-import { handleImageError, getPlaceholderImage } from '../utils/imageFallback';
+import { handleImageError, getPlaceholderImage, getLiveImageUrl } from '../utils/imageFallback';
 import { productAPI, reviewAPI, shippingReturnAPI } from '../utils/api';
 import {
   pickDefaultColor,
@@ -534,7 +534,7 @@ const ProductDetail = () => {
                         }`}
                       >
                         <img
-                          src={img}
+                          src={getLiveImageUrl(img)}
                           alt={`${(product?.name || 'Product')} ${idx + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => handleImageError(e, 100, 100)}
@@ -615,7 +615,7 @@ const ProductDetail = () => {
                   )}
 
                   <img
-                    src={productImages[Math.min(selectedImageIndex, productImages.length - 1)]}
+                    src={getLiveImageUrl(productImages[Math.min(selectedImageIndex, productImages.length - 1)])}
                     alt={(product?.name || 'Product')}
                     className="w-full h-full object-cover"
                     onError={(e) => handleImageError(e, 600, 600)}
@@ -641,7 +641,7 @@ const ProductDetail = () => {
                         }`}
                       >
                         <img
-                          src={img}
+                          src={getLiveImageUrl(img)}
                           alt={`${(product?.name || 'Product')} ${idx + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => handleImageError(e, 80, 80)}
@@ -675,7 +675,7 @@ const ProductDetail = () => {
                         >
                           {thumb ? (
                             <img
-                              src={thumb}
+                              src={getLiveImageUrl(thumb)}
                               alt={variant.color}
                               className="w-full h-full object-cover"
                               onError={(e) => handleImageError(e, 36, 36)}
@@ -804,7 +804,7 @@ const ProductDetail = () => {
                         >
                           {variantImg ? (
                             <img
-                              src={variantImg}
+                              src={getLiveImageUrl(variantImg)}
                               alt={variant.color}
                               className="w-5 h-5 object-cover rounded-full border border-gray-300 flex-shrink-0"
                               onError={(e) => handleImageError(e, 20, 20)}

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../components/ToastContainer';
 import { pickDefaultColor, productSnapshotForCart } from '../utils/colorVariants';
+import { getLiveImageUrl, handleImageError } from '../utils/imageFallback';
 
 const ProductComparison = () => {
   const { addToCart, isProductInCart } = useCart();
@@ -106,9 +107,10 @@ const ProductComparison = () => {
                 {products.map((product) => (
                   <td key={product._id || product.id} className="px-4 py-3">
                     <img
-                      src={product.images?.[0] || product.image}
+                      src={getLiveImageUrl(product.images?.[0] || product.image)}
                       alt={product.name}
                       className="w-24 h-24 object-cover rounded"
+                      onError={(e) => handleImageError(e, 96, 96)}
                     />
                   </td>
                 ))}

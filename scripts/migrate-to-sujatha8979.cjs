@@ -1,377 +1,291 @@
 /**
- * Migration Script: sumitbvalorant → sujatha8979
- * 
- * This script:
- * 1. Fetches all products from the ChoiceTime API
- * 2. For each image stored on sumitbvalorant (which has 429 bandwidth issue),
- *    it downloads the image and re-uploads it to sujatha8979 (fresh bandwidth)
- * 3. Updates the product image URLs in MongoDB via the admin API
- * 
- * Run: node scripts/migrate-to-sujatha8979.cjs
+ * Copy every live product image onto sujatha8979 (fresh bandwidth).
+ *
+ * Sources, in order: original URL, other ImageKit accounts, Cloudinary.
+ * Uploads keep the same folder + file name so failover can swap account IDs.
+ *
+ * Run:
+ *   IMAGEKIT_PRIVATE_KEY=private_... node scripts/migrate-to-sujatha8979.cjs
  */
 
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
-const http = require('http');
-const FormData = require('form-data');
 
-// ─── CONFIGURATION ───────────────────────────────────────────────────────────
-const SUJATHA_PUBLIC_KEY  = 'public_mm2J6vrTcyzikYn23efV9R3HCAM=';
-const SUJATHA_PRIVATE_KEY = 'private_oyp9oiRmzh6T7CurobADWSL7ZNo=';
-const SUJATHA_ENDPOINT    = 'https://ik.imagekit.io/sujatha8979';
-const IMAGEKIT_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
-
+const TARGET_PUBLIC_KEY = process.env.IMAGEKIT_PUBLIC_KEY || 'public_mm2J6vrTcyzikYn23efV9R3HCAM=';
+const TARGET_PRIVATE_KEY = process.env.IMAGEKIT_PRIVATE_KEY || process.env.SUJATHA_PRIVATE_KEY || '';
+const TARGET_ACCOUNT = 'sujatha8979';
+const TARGET_ENDPOINT = `https://ik.imagekit.io/${TARGET_ACCOUNT}`;
+const UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
+const FILES_API = 'https://api.imagekit.io/v1/files';
 const API_BASE = 'https://api.choicetime.in/api';
+const CONCURRENCY = 3;
 
-// Log file to track progress
+const IK_ACCOUNTS = ['pyd0fawt1', 'sumitbvalorant', 'l6od6mlo3j', 'sujatha8979'];
+const EXTRA_URLS = [
+  'https://ik.imagekit.io/sumitbvalorant/ChatGPT%20Image%20Aug%2024,%202026,%2003_16_38%20PM.png',
+  'https://ik.imagekit.io/pyd0fawt1/raksha%20bandan%20sale%20banner.jpeg',
+  'https://ik.imagekit.io/pyd0fawt1/raksha-bandan-sale',
+];
+
 const LOG_FILE = path.join(__dirname, 'migration-sujatha8979.json');
-// ─────────────────────────────────────────────────────────────────────────────
 
-const authHeader = 'Basic ' + Buffer.from(SUJATHA_PRIVATE_KEY + ':').toString('base64');
-
-// Load previous progress
-let migrationLog = [];
-if (fs.existsSync(LOG_FILE)) {
-  try {
-    migrationLog = JSON.parse(fs.readFileSync(LOG_FILE, 'utf8'));
-    console.log(`📋 Loaded ${migrationLog.length} previous migration records`);
-  } catch (e) {
-    migrationLog = [];
-  }
+if (!TARGET_PRIVATE_KEY) {
+  console.error('Missing IMAGEKIT_PRIVATE_KEY (sujatha8979 private key).');
+  process.exit(1);
 }
 
-// Set of already-migrated original URLs for fast lookup
-const alreadyMigrated = new Map();
-migrationLog.forEach(r => {
-  if (r.status === 'MIGRATED' && r.originalUrl) {
-    alreadyMigrated.set(r.originalUrl, r.newUrl);
-  }
-});
+const authHeader = 'Basic ' + Buffer.from(`${TARGET_PRIVATE_KEY}:`).toString('base64');
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Download an image buffer from a URL (follows redirects)
- */
-async function downloadImage(url, retries = 3) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; ChoiceTime-Migration/1.0)',
-          'Accept': 'image/*,*/*',
-        },
-        signal: AbortSignal.timeout(30000)
-      });
+function parseIkPath(url) {
+  const m = String(url).match(/ik\.imagekit\.io\/[^/]+\/(.+?)(?:\?|$)/);
+  const rawPath = m ? decodeURIComponent(m[1]) : path.basename(String(url).split('?')[0]);
+  const parts = rawPath.split('/').filter(Boolean);
+  const fileName = parts.pop() || 'image.jpg';
+  const folder = parts.length ? `/${parts.join('/')}` : '';
+  return { rawPath, fileName, folder };
+}
 
-      if (res.status === 429) {
-        throw new Error(`429 Bandwidth limit (source account exhausted)`);
-      }
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText}`);
-      }
+function swapAccount(src, account) {
+  return String(src).replace(/ik\.imagekit\.io\/[^/]+\//, `ik.imagekit.io/${account}/`);
+}
 
-      const contentType = res.headers.get('content-type') || 'image/jpeg';
-      const arrayBuffer = await res.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      if (buffer.length < 100) {
-        throw new Error(`Response too small (${buffer.length} bytes) — likely error page`);
-      }
-
-      return { buffer, contentType };
-    } catch (err) {
-      if (attempt === retries) throw err;
-      console.warn(`    ⚠ Download attempt ${attempt} failed: ${err.message}. Retrying...`);
-      await sleep(2000 * attempt);
-    }
+function cloudinaryGuesses(url) {
+  const { fileName } = parseIkPath(url);
+  const base = fileName.replace(/\.[^.]+$/, '');
+  const first = base.split('_')[0];
+  const guesses = new Set();
+  for (const id of [first, base]) {
+    if (!id || id.length < 4) continue;
+    guesses.add(`https://res.cloudinary.com/dndqnoxqg/image/upload/${id}.jpg`);
+    guesses.add(`https://res.cloudinary.com/dndqnoxqg/image/upload/${id}.png`);
+    guesses.add(`https://res.cloudinary.com/dndqnoxqg/image/upload/${id}`);
   }
+  return [...guesses];
 }
 
-/**
- * Upload buffer to sujatha8979 ImageKit account
- */
-async function uploadToSujatha(buffer, fileName, contentType = 'image/jpeg') {
-  // Use form-data if available, else build manually
-  const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
-  
-  // Build multipart body manually
-  const ext = fileName.split('.').pop() || 'jpg';
-  const cleanFileName = fileName.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
-  
-  const parts = [];
-  
-  // filename field
-  parts.push(
-    `--${boundary}\r\nContent-Disposition: form-data; name="fileName"\r\n\r\n${cleanFileName}`
-  );
-  // file field
-  const fileHeader = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${cleanFileName}"\r\nContent-Type: ${contentType}\r\n\r\n`;
-  const fileFooter = `\r\n--${boundary}--\r\n`;
-  
-  const headerBuf = Buffer.from(parts.join('\r\n') + '\r\n' + fileHeader);
-  const footerBuf = Buffer.from(fileFooter);
-  const body = Buffer.concat([headerBuf, buffer, footerBuf]);
-  
-  const res = await fetch(IMAGEKIT_UPLOAD_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      'Content-Length': body.length.toString(),
-    },
-    body: body,
-    signal: AbortSignal.timeout(60000)
+function sourceCandidates(originalUrl) {
+  const { rawPath, fileName } = parseIkPath(originalUrl);
+  const urls = [originalUrl];
+  for (const account of IK_ACCOUNTS) {
+    urls.push(swapAccount(originalUrl, account));
+    urls.push(`https://ik.imagekit.io/${account}/${rawPath}`);
+    urls.push(`https://ik.imagekit.io/${account}/${fileName}`);
+    urls.push(`https://ik.imagekit.io/${account}/uploads/${fileName}`);
+  }
+  urls.push(...cloudinaryGuesses(originalUrl));
+  return [...new Set(urls.filter(Boolean))];
+}
+
+function looksLikeImage(buffer, contentType) {
+  if (!buffer || buffer.length < 200) return false;
+  if (contentType && contentType.includes('text/html')) return false;
+  const b0 = buffer[0];
+  const b1 = buffer[1];
+  const b2 = buffer[2];
+  const b3 = buffer[3];
+  const jpeg = b0 === 0xff && b1 === 0xd8;
+  const png = b0 === 0x89 && b1 === 0x50 && b2 === 0x4e && b3 === 0x47;
+  const gif = b0 === 0x47 && b1 === 0x49 && b2 === 0x46;
+  const webp = buffer.slice(0, 4).toString() === 'RIFF';
+  const typeOk = !contentType || contentType.startsWith('image/') || contentType === 'application/octet-stream';
+  return typeOk && (jpeg || png || gif || webp || (contentType || '').startsWith('image/'));
+}
+
+async function fetchBuffer(url) {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'ChoiceTime-Migration/2.0', Accept: 'image/*,*/*' },
+    signal: AbortSignal.timeout(25000),
+    redirect: 'follow',
   });
-
-  const responseText = await res.text();
-  
-  if (!res.ok) {
-    throw new Error(`Upload failed ${res.status}: ${responseText.substring(0, 300)}`);
-  }
-
-  let data;
-  try {
-    data = JSON.parse(responseText);
-  } catch {
-    throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
-  }
-
-  return data.url || data.filePath || null;
+  if (!res.ok) return null;
+  const contentType = res.headers.get('content-type') || '';
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (!looksLikeImage(buffer, contentType)) return null;
+  return { buffer, contentType: contentType.startsWith('image/') ? contentType : 'image/jpeg', sourceUrl: url };
 }
 
-/**
- * Migrate a single image URL
- */
-async function migrateImage(originalUrl) {
-  // Skip if already migrated
-  if (alreadyMigrated.has(originalUrl)) {
-    return { status: 'SKIPPED', newUrl: alreadyMigrated.get(originalUrl) };
-  }
-
-  // Check if it's a sumitbvalorant URL
-  if (!originalUrl.includes('ik.imagekit.io/sumitbvalorant')) {
-    return { status: 'NOT_SUMIT', newUrl: originalUrl };
-  }
-
-  // Extract filename from URL
-  const urlParts = originalUrl.split('/');
-  const rawFileName = urlParts[urlParts.length - 1].split('?')[0];
-  
-  try {
-    // Step 1: Try to download from sumitbvalorant
-    // Note: 429 means CDN bandwidth exhausted but the file EXISTS on the server
-    // We'll try with a different approach using the private key auth
-    let downloadResult;
-    
+async function findWorkingSource(originalUrl) {
+  for (const url of sourceCandidates(originalUrl)) {
     try {
-      downloadResult = await downloadImage(originalUrl);
-    } catch (dlErr) {
-      if (dlErr.message.includes('429')) {
-        // Try downloading via ImageKit's media API with auth (bypasses CDN limits)
-        const authUrl = originalUrl; // Same URL, but with auth header
-        const res = await fetch(originalUrl, {
-          headers: {
-            'Authorization': authHeader.replace('private_oyp9oiRmzh6T7CurobADWSL7ZNo=:', 
-              // We don't have sumitbvalorant's private key, so try direct
-              ''),
-            'User-Agent': 'ChoiceTime-Server/1.0',
-          },
-          signal: AbortSignal.timeout(30000)
-        });
-        
-        if (!res.ok && res.status === 429) {
-          return { status: 'SOURCE_429', newUrl: null, reason: 'sumitbvalorant bandwidth exhausted, cannot download' };
-        }
-        const ab = await res.arrayBuffer();
-        downloadResult = { buffer: Buffer.from(ab), contentType: res.headers.get('content-type') || 'image/jpeg' };
-      } else {
-        throw dlErr;
-      }
+      const found = await fetchBuffer(url);
+      if (found) return found;
+    } catch {
+      // try next candidate
     }
-
-    // Step 2: Upload to sujatha8979
-    const newUrl = await uploadToSujatha(downloadResult.buffer, rawFileName, downloadResult.contentType);
-    
-    if (!newUrl) {
-      throw new Error('Upload returned no URL');
-    }
-
-    alreadyMigrated.set(originalUrl, newUrl);
-    return { status: 'MIGRATED', newUrl };
-
-  } catch (err) {
-    return { status: 'FAILED', newUrl: null, reason: err.message };
   }
+  return null;
 }
 
-/**
- * Main migration function
- */
+async function listTargetFiles() {
+  const existing = new Set();
+  let skip = 0;
+  const limit = 1000;
+  while (true) {
+    const res = await fetch(`${FILES_API}?limit=${limit}&skip=${skip}`, {
+      headers: { Authorization: authHeader },
+    });
+    if (!res.ok) {
+      throw new Error(`List files failed ${res.status}: ${await res.text()}`);
+    }
+    const files = await res.json();
+    if (!Array.isArray(files) || files.length === 0) break;
+    for (const f of files) {
+      const filePath = String(f.filePath || f.name || '').replace(/^\//, '');
+      if (filePath) existing.add(filePath);
+      if (f.name) existing.add(f.name);
+    }
+    if (files.length < limit) break;
+    skip += files.length;
+  }
+  return existing;
+}
+
+async function uploadBuffer({ buffer, contentType, fileName, folder }) {
+  const form = new FormData();
+  form.append('file', new Blob([buffer], { type: contentType || 'image/jpeg' }), fileName);
+  form.append('fileName', fileName);
+  form.append('publicKey', TARGET_PUBLIC_KEY);
+  form.append('useUniqueFileName', 'false');
+  form.append('overwriteFile', 'true');
+  if (folder) form.append('folder', folder);
+
+  const res = await fetch(UPLOAD_URL, {
+    method: 'POST',
+    headers: { Authorization: authHeader },
+    body: form,
+    signal: AbortSignal.timeout(90000),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Upload ${res.status}: ${text.slice(0, 240)}`);
+  const data = JSON.parse(text);
+  return data.url || `${TARGET_ENDPOINT}${folder ? `${folder}/` : '/'}${encodeURIComponent(fileName)}`;
+}
+
+function collectProductUrls(products) {
+  const urls = [];
+  for (const p of products) {
+    const list = [];
+    if (Array.isArray(p.images)) list.push(...p.images);
+    list.push(p.image, p.thumbnail);
+    if (Array.isArray(p.colorVariants)) {
+      for (const v of p.colorVariants) {
+        if (v?.image) list.push(v.image);
+        if (Array.isArray(v?.images)) list.push(...v.images);
+      }
+    }
+    for (const img of list) {
+      if (typeof img === 'string' && img.startsWith('http')) urls.push(img.split('?')[0]);
+    }
+  }
+  return urls;
+}
+
+async function mapPool(items, worker, concurrency) {
+  const results = new Array(items.length);
+  let index = 0;
+  async function run() {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await worker(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, run));
+  return results;
+}
+
 async function main() {
-  console.log('🚀 Starting migration: sumitbvalorant → sujatha8979');
-  console.log('📡 Fetching all products from API...\n');
+  console.log('Copying live images →', TARGET_ENDPOINT);
 
-  // Fetch all products
-  let allProducts = [];
-  const categories = ['men', 'women', 'watches', 'lens', 'accessories'];
-  
-  // Try generic endpoint first
-  try {
-    const res = await fetch(`${API_BASE}/products?limit=1000`);
-    const data = await res.json();
-    allProducts = data.data?.products || data.products || [];
-    console.log(`✅ Fetched ${allProducts.length} products from generic endpoint`);
-  } catch (e) {
-    console.error('❌ Failed to fetch products:', e.message);
-    process.exit(1);
+  const res = await fetch(`${API_BASE}/products?limit=1000`);
+  const json = await res.json();
+  const products = json.data?.products || [];
+  const unique = [...new Set([...collectProductUrls(products), ...EXTRA_URLS])];
+  console.log(`Products: ${products.length}. Unique image URLs: ${unique.length}`);
+
+  console.log('Listing files already on sujatha8979...');
+  const existing = await listTargetFiles();
+  console.log(`Already on target: ${existing.size}`);
+
+  let log = [];
+  if (fs.existsSync(LOG_FILE)) {
+    try {
+      log = JSON.parse(fs.readFileSync(LOG_FILE, 'utf8'));
+    } catch {
+      log = [];
+    }
   }
+  const done = new Set(log.filter((r) => r.status === 'MIGRATED').map((r) => r.originalUrl));
 
-  // Collect all images that need migration
-  const imagesToMigrate = new Map(); // originalUrl -> [{ productId, fieldPath }]
-  
-  let totalImages = 0;
-  let sumitImages = 0;
+  const stats = { migrated: 0, skipped: 0, failed: 0 };
 
-  for (const product of allProducts) {
-    const pid = product._id || product.id;
-    
-    // Main images array
-    if (Array.isArray(product.images)) {
-      for (let i = 0; i < product.images.length; i++) {
-        const img = product.images[i];
-        if (img && typeof img === 'string') {
-          totalImages++;
-          if (img.includes('ik.imagekit.io/sumitbvalorant')) {
-            sumitImages++;
-            if (!imagesToMigrate.has(img)) imagesToMigrate.set(img, []);
-            imagesToMigrate.get(img).push({ productId: pid, field: `images[${i}]` });
-          }
+  await mapPool(
+    unique,
+    async (originalUrl, i) => {
+      const { rawPath, fileName, folder } = parseIkPath(originalUrl);
+      if (done.has(originalUrl) || existing.has(rawPath) || existing.has(fileName)) {
+        stats.skipped++;
+        if ((i + 1) % 50 === 0) {
+          console.log(`[${i + 1}/${unique.length}] skipped existing ${fileName}`);
         }
+        return;
       }
-    }
-    
-    // colorVariants images
-    if (Array.isArray(product.colorVariants)) {
-      for (let vi = 0; vi < product.colorVariants.length; vi++) {
-        const variant = product.colorVariants[vi];
-        if (Array.isArray(variant.images)) {
-          for (let ii = 0; ii < variant.images.length; ii++) {
-            const img = variant.images[ii];
-            if (img && typeof img === 'string') {
-              totalImages++;
-              if (img.includes('ik.imagekit.io/sumitbvalorant')) {
-                sumitImages++;
-                if (!imagesToMigrate.has(img)) imagesToMigrate.set(img, []);
-                imagesToMigrate.get(img).push({ productId: pid, field: `colorVariants[${vi}].images[${ii}]` });
-              }
-            }
-          }
+
+      try {
+        const found = await findWorkingSource(originalUrl);
+        if (!found) {
+          stats.failed++;
+          log.push({ status: 'NO_SOURCE', originalUrl, timestamp: new Date().toISOString() });
+          console.log(`[${i + 1}/${unique.length}] NO SOURCE ${fileName}`);
+          return;
         }
+        const newUrl = await uploadBuffer({
+          buffer: found.buffer,
+          contentType: found.contentType,
+          fileName,
+          folder,
+        });
+        stats.migrated++;
+        existing.add(rawPath);
+        existing.add(fileName);
+        log.push({
+          status: 'MIGRATED',
+          originalUrl,
+          newUrl,
+          source: found.sourceUrl,
+          timestamp: new Date().toISOString(),
+        });
+        console.log(`[${i + 1}/${unique.length}] OK ${fileName} ← ${found.sourceUrl.includes('cloudinary') ? 'cloudinary' : 'imagekit'}`);
+      } catch (err) {
+        stats.failed++;
+        log.push({
+          status: 'FAILED',
+          originalUrl,
+          reason: err.message,
+          timestamp: new Date().toISOString(),
+        });
+        console.log(`[${i + 1}/${unique.length}] FAIL ${fileName}: ${err.message}`);
+        await sleep(400);
       }
-    }
-  }
 
-  const uniqueImagesToMigrate = Array.from(imagesToMigrate.keys());
-  const alreadyDone = uniqueImagesToMigrate.filter(u => alreadyMigrated.has(u)).length;
-  const remaining = uniqueImagesToMigrate.length - alreadyDone;
+      if ((i + 1) % 15 === 0) {
+        fs.writeFileSync(LOG_FILE, JSON.stringify(log, null, 2));
+        console.log(`saved ${stats.migrated} copied, ${stats.skipped} skipped, ${stats.failed} failed`);
+      }
+    },
+    CONCURRENCY
+  );
 
-  console.log(`📊 Image Statistics:`);
-  console.log(`   Total images in DB: ${totalImages}`);
-  console.log(`   On sumitbvalorant (need migration): ${sumitImages}`);
-  console.log(`   Unique URLs to migrate: ${uniqueImagesToMigrate.length}`);
-  console.log(`   Already migrated (from previous run): ${alreadyDone}`);
-  console.log(`   Remaining to migrate: ${remaining}\n`);
-
-  if (remaining === 0) {
-    console.log('✅ All images already migrated!');
-    return;
-  }
-
-  // Migrate each unique URL
-  let migrated = 0;
-  let failed = 0;
-  let source429 = 0;
-  let skipped = 0;
-
-  for (let i = 0; i < uniqueImagesToMigrate.length; i++) {
-    const originalUrl = uniqueImagesToMigrate[i];
-    
-    if (alreadyMigrated.has(originalUrl)) {
-      skipped++;
-      continue;
-    }
-
-    process.stdout.write(`[${i + 1}/${uniqueImagesToMigrate.length}] Migrating ${path.basename(originalUrl).substring(0, 40)}... `);
-
-    const result = await migrateImage(originalUrl);
-
-    if (result.status === 'MIGRATED') {
-      console.log(`✅ → ${result.newUrl.substring(0, 60)}`);
-      migrated++;
-      migrationLog.push({
-        status: 'MIGRATED',
-        originalUrl,
-        newUrl: result.newUrl,
-        timestamp: new Date().toISOString()
-      });
-    } else if (result.status === 'SOURCE_429') {
-      console.log(`⚠️  SOURCE 429 — cannot download (bandwidth exhausted on source)`);
-      source429++;
-      migrationLog.push({
-        status: 'SOURCE_429',
-        originalUrl,
-        newUrl: null,
-        reason: result.reason,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      console.log(`❌ FAILED: ${result.reason}`);
-      failed++;
-      migrationLog.push({
-        status: 'FAILED',
-        originalUrl,
-        newUrl: null,
-        reason: result.reason,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Save progress every 10 images
-    if ((i + 1) % 10 === 0) {
-      fs.writeFileSync(LOG_FILE, JSON.stringify(migrationLog, null, 2));
-      console.log(`💾 Progress saved (${migrated} migrated, ${failed} failed, ${source429} source-429)\n`);
-    }
-
-    // Rate limit: small delay between uploads
-    await sleep(300);
-  }
-
-  // Final save
-  fs.writeFileSync(LOG_FILE, JSON.stringify(migrationLog, null, 2));
-
-  console.log('\n═══════════════════════════════════════');
-  console.log('📊 MIGRATION COMPLETE');
-  console.log(`   ✅ Migrated:     ${migrated}`);
-  console.log(`   ⏭  Skipped:     ${skipped}`);
-  console.log(`   ⚠️  Source 429:  ${source429}`);
-  console.log(`   ❌ Failed:       ${failed}`);
-  console.log(`   📄 Log saved to: ${LOG_FILE}`);
-  console.log('═══════════════════════════════════════\n');
-
-  if (source429 > 0) {
-    console.log('⚠️  NOTE: Source 429 means the images exist on sumitbvalorant but');
-    console.log('   CDN bandwidth is exhausted. You have two options:');
-    console.log('   1. Upload original photos again from your phone/camera to sujatha8979');
-    console.log('   2. Wait until October 1st when sumitbvalorant bandwidth resets,');
-    console.log('      then re-run this script to complete migration.');
-  }
+  fs.writeFileSync(LOG_FILE, JSON.stringify(log, null, 2));
+  console.log('\nDone.');
+  console.log(stats);
+  console.log('Log:', LOG_FILE);
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
+main().catch((err) => {
+  console.error(err);
   process.exit(1);
 });

@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import Order from '../models/Order.js';
 import { applyCancellationRefunds } from '../services/orderCancellationRefunds.js';
 import Product from '../models/Product.js';
+import { rewriteProductImages } from '../utils/imageCdn.js';
 import Category from '../models/Category.js';
 import Review from '../models/Review.js';
 import ShippingReturnPolicy from '../models/ShippingReturnPolicy.js';
@@ -298,13 +299,15 @@ export const getAdminProducts = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        products: products.map((p) => ({
-          ...p,
-          colorVariants:
-            Array.isArray(p.colorVariants) && p.colorVariants.length
-              ? p.colorVariants
-              : p.productDetails?.colorVariants || [],
-        })),
+        products: products.map((p) =>
+          rewriteProductImages({
+            ...p,
+            colorVariants:
+              Array.isArray(p.colorVariants) && p.colorVariants.length
+                ? p.colorVariants
+                : p.productDetails?.colorVariants || [],
+          })
+        ),
       },
     });
   } catch (error) {
