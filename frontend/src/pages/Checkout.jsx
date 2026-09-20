@@ -16,14 +16,11 @@ const Checkout = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [addressSaved, setAddressSaved] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' or 'cod'
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false); // Prevent cart redirect during order placement
   const [isProcessingOrder, setIsProcessingOrder] = useState(false); // Show processing state
   const [processingStep, setProcessingStep] = useState(0); // Track processing steps
   const [orderData, setOrderData] = useState(null); // Store order data for success page
-  /** COD advance in ₹ — from GET /payment/cod-advance (same server as Razorpay create-order) */
-  const [codAdvanceRupees, setCodAdvanceRupees] = useState(null);
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -162,22 +159,7 @@ const Checkout = () => {
     loadAvailableCoupons();
   }, [isAuthenticated, cart.length, navigate, isPlacingOrder]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await paymentAPI.getCodAdvanceConfig();
-        if (cancelled || !res?.success || res.data?.rupees == null) return;
-        const r = Number(res.data.rupees);
-        if (Number.isFinite(r) && r >= 0) setCodAdvanceRupees(r);
-      } catch (e) {
-        console.error('COD advance config:', e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -265,15 +247,8 @@ const Checkout = () => {
         // Continue with payment even if address save fails
       }
 
-      if (paymentMethod === 'cod') {
-        console.log('Processing COD order with advance payment...');
-        // Handle Cash on Delivery order with advance payment
-        await handleCODOrder();
-      } else {
-        console.log('Processing online payment...');
-        // Handle online payment
-        await handleOnlinePayment();
-      }
+      console.log('Processing online payment...');
+      await handleOnlinePayment();
     } catch (err) {
       console.error('Payment error:', err);
       setError(err.message || 'Failed to initiate payment. Please try again.');
@@ -282,117 +257,7 @@ const Checkout = () => {
     }
   };
 
-  const handleCODOrder = async () => {
-    const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
 
-    if (!scriptLoaded) {
-      throw new Error('Failed to load payment gateway. Please refresh the page and try again.');
-    }
-
-    if (!window.Razorpay) {
-      throw new Error('Payment gateway is not available. Please refresh the page and try again.');
-    }
-
-    const response = await paymentAPI.createRazorpayOrder({
-      purpose: 'cod_advance',
-      shippingAddress,
-    });
-
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to create advance payment order');
-    }
-
-    const { orderId, amount, currency, key } = response.data;
-    const amountPaise = Number(amount);
-    if (!Number.isFinite(amountPaise) || amountPaise < 1) {
-      throw new Error('Invalid advance amount from server. Check backend payment config.');
-    }
-    // Rupees actually charged (source of truth = API, avoids local/backend version mismatch)
-    const advanceAmountPaid = amountPaise / 100;
-    setCodAdvanceRupees(advanceAmountPaid);
-
-    // Razorpay options for COD advance payment
-    const options = {
-      key: key,
-      amount: amountPaise,
-      currency: currency,
-      name: 'ChoiceTime',
-      description: `COD Advance Payment - ₹${advanceAmountPaid}`,
-      order_id: orderId,
-      handler: async function (response) {
-        try {
-          setIsProcessingOrder(true);
-          setProcessingStep(5);
-
-          // Verify advance payment
-          const verifyResponse = await paymentAPI.verifyPayment(
-            response.razorpay_order_id,
-            response.razorpay_payment_id,
-            response.razorpay_signature
-          );
-
-          if (verifyResponse.success) {
-            // Create COD order with advance payment info
-            const orderResponse = await orderAPI.createOrder(
-              shippingAddress,
-              'COD',
-              appliedCoupon?.code || '',
-              {
-                advancePayment: {
-                  amount: advanceAmountPaid,
-                  razorpayOrderId: response.razorpay_order_id,
-                  razorpayPaymentId: response.razorpay_payment_id,
-                  razorpaySignature: response.razorpay_signature
-                }
-              }
-            );
-
-            if (orderResponse.success) {
-              setProcessingStep(6);
-              setOrderData(orderResponse.data.order);
-              setShowSuccessModal(true);
-              setIsProcessingOrder(false);
-              setLoading(false);
-
-              // Clear cart and redirect after delay
-              setTimeout(() => {
-                setIsPlacingOrder(true);
-                clearCart();
-                const oid = orderResponse.data.order?._id;
-                if (oid) navigate(`/orders/${String(oid)}?payment=cod`);
-                else navigate('/profile?tab=orders&payment=cod');
-              }, 2000);
-            } else {
-              throw new Error(orderResponse.message || 'Failed to create COD order');
-            }
-          } else {
-            throw new Error('Advance payment verification failed');
-          }
-        } catch (err) {
-          console.error('COD order error:', err);
-          setError(err.message || 'Failed to place COD order. Please try again.');
-          setIsProcessingOrder(false);
-          setLoading(false);
-          setProcessingStep(0);
-        }
-      },
-      prefill: {
-        name: shippingAddress.name,
-        email: user?.email || '',
-        contact: shippingAddress.phone,
-      },
-      notes: {
-        address: `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.state}`,
-        type: 'cod_advance',
-      },
-      theme: {
-        color: '#111827',
-      },
-      modal: {
-        ondismiss: function () {
-          setLoading(false);
-          setIsPlacingOrder(false);
-          setIsProcessingOrder(false);
           setProcessingStep(0);
           setError('Advance payment cancelled. Please try again.');
         },
@@ -1081,30 +946,12 @@ const Checkout = () => {
                     {shippingAmount === 0 ? 'Free' : `₹${shippingAmount.toLocaleString()}`}
                   </span>
                 </div>
-                {paymentMethod === 'cod' && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">COD Advance Payment</span>
-                    <span className="font-medium text-blue-600">
-                      ₹{codAdvanceRupees == null ? '…' : codAdvanceRupees}
-                    </span>
-                  </div>
-                )}
                 <div className="border-t border-gray-200 pt-2.5 mt-2.5 flex justify-between">
-                  <span className="text-base font-semibold text-gray-900">
-                    {paymentMethod === 'cod' ? 'Payable Now' : 'Total'}
-                  </span>
+                  <span className="text-base font-semibold text-gray-900">Total</span>
                   <span className="text-lg font-semibold text-gray-900">
-                    ₹{paymentMethod === 'cod' ? (codAdvanceRupees == null ? '…' : codAdvanceRupees) : finalPayable.toLocaleString()}
+                    ₹{finalPayable.toLocaleString()}
                   </span>
                 </div>
-                {paymentMethod === 'cod' && (
-                  <div className="border-t border-gray-200 pt-2.5 mt-2.5 flex justify-between">
-                    <span className="text-xs text-gray-500">Remaining on delivery</span>
-                    <span className="text-sm font-medium text-gray-700">
-                      ₹{codAdvanceRupees == null ? '…' : Math.max(0, finalPayable - codAdvanceRupees).toLocaleString()}
-                    </span>
-                  </div>
-                )}
                 {couponDiscount > 0 && (
                   <p className="text-xs text-green-600 font-medium">You save ₹{couponDiscount.toLocaleString()}!</p>
                 )}
@@ -1113,50 +960,16 @@ const Checkout = () => {
                 )}
               </div>
 
-              {/* Payment Method Selection */}
+              {/* Payment Method — Online only */}
               <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Method</h3>
-                <div className="space-y-2.5">
-                  <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
-                    paymentMethod === 'razorpay' 
-                      ? 'border-gray-900 bg-gray-50' 
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="razorpay"
-                      checked={paymentMethod === 'razorpay'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900 mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">Online Payment</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Cards, UPI, Net Banking, Wallets</div>
-                    </div>
-                  </label>
-                  
-                  <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
-                    paymentMethod === 'cod' 
-                      ? 'border-gray-900 bg-gray-50' 
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={paymentMethod === 'cod'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900 mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">Cash on Delivery</div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        Pay ₹{codAdvanceRupees == null ? '…' : codAdvanceRupees} advance online, remaining on delivery
-                      </div>
-                      <div className="text-xs text-gray-600 mt-1">Advance amount is non-refundable</div>
-                    </div>
-                  </label>
+                <div className="flex items-start gap-3 p-3 border border-gray-900 bg-gray-50 rounded-md">
+                  <svg className="w-5 h-5 text-gray-900 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Online Payment</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Cards, UPI, Net Banking, Wallets</div>
+                  </div>
                 </div>
               </div>
 
@@ -1173,14 +986,14 @@ const Checkout = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span>{paymentMethod === 'cod' ? 'Place Order' : isProcessingOrder ? 'Placing Order...' : 'Processing...'}</span>
+                      <span>{isProcessingOrder ? 'Placing Order...' : 'Processing...'}</span>
                     </>
                   ) : (
                     <>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
-                      <span>{paymentMethod === 'cod' ? 'Place Order' : 'Pay Now'}</span>
+                      <span>Pay Now</span>
                     </>
                   )}
                 </button>
