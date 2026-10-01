@@ -38,10 +38,18 @@ import ProductComparison from './pages/ProductComparison';
 import CookieConsent from './components/CookieConsent';
 import ErrorBoundary from './components/ErrorBoundary';
 import BackToTop from './components/BackToTop';
+import Maintenance from './pages/Maintenance';
+
+// ─── Set to false to turn off maintenance mode ───
+const MAINTENANCE_MODE = true;
 
 function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+
+  // Show maintenance page for all non-admin routes
+  if (MAINTENANCE_MODE && !isAdminRoute) return <Maintenance />;
+
   const [showScratchCard, setShowScratchCard] = useState(false);
 
   // Scroll to top on route change
