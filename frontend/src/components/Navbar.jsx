@@ -185,7 +185,13 @@ const Navbar = () => {
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
-                    onError={(e) => handleImageError(e, 160, 56)}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const text = document.createElement('span');
+                      text.innerText = 'ChoiceTime';
+                      text.style.cssText = 'font-size:20px;font-weight:800;color:#111827;letter-spacing:-0.03em;font-family:serif';
+                      e.target.parentNode.appendChild(text);
+                    }}
                   />
                 </Link>
               </div>
