@@ -260,40 +260,7 @@ const ProductCard = ({ product }) => {
               </>
             )}
 
-            {colorChoices.length > 1 && (
-              <div
-                className="absolute bottom-2 left-2 right-2 z-20 flex flex-wrap gap-1"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              >
-                {colorChoices.slice(0, 6).map((variant) => {
-                  const cssColor = swatchCssColor(variant);
-                  const thumb = variant.images?.[0];
-                  const isActive = previewVariant && previewVariant.color === variant.color;
-                  return (
-                    <button
-                      key={variant.color}
-                      type="button"
-                      title={variant.color}
-                      onMouseEnter={() => setPreviewVariant(variant)}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setPreviewVariant(variant);
-                      }}
-                      className={`w-4 h-4 rounded-full border overflow-hidden shadow-sm ${
-                        isActive ? 'border-gray-900 ring-1 ring-white' : 'border-white'
-                      }`}
-                    >
-                      {thumb ? (
-                        <img src={getLiveImageUrl(thumb)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
-                      ) : (
-                        <span className="block w-full h-full" style={{ backgroundColor: cssColor || '#9ca3af' }} />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+
 
           </div>
 
