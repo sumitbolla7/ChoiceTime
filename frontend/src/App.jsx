@@ -41,7 +41,7 @@ import BackToTop from './components/BackToTop';
 import Maintenance from './pages/Maintenance';
 
 // ─── Set to false to turn off maintenance mode ───
-const MAINTENANCE_MODE = true;
+const MAINTENANCE_MODE = false;
 
 function AppContent() {
   const location = useLocation();
