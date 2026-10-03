@@ -179,8 +179,8 @@ const Navbar = () => {
               <div className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2">
                 <Link to="/" onClick={scrollToTop} className="flex-shrink-0 group relative z-10">
                   <img
-                    src={getLiveImageUrl("https://ik.imagekit.io/sumitbvalorant/ChatGPT%20Image%20Aug%2024,%202026,%2003_16_38%20PM.png")}
-                    alt="choicetime"
+                    src="https://i.ibb.co/SD9t5rmH/Chat-GPT-Image-Aug-24-2026-03-16-38-PM.webp"
+                    alt="ChoiceTime"
                     className="h-10 md:h-14 w-auto object-contain"
                     loading="eager"
                     fetchPriority="high"
