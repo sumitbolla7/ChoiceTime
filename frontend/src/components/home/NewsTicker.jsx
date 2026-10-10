@@ -1,5 +1,5 @@
 const NewsTicker = () => {
-  const marqueeContent = "◆ FREE SHIPPING ON ORDERS OVER ₹2000 ◆ | ● NEW ARRIVALS EVERY WEEK ●";
+  const marqueeContent = "◆ FREE SHIPPING ON ORDERS OVER ₹4000 ◆ | ● NEW ARRIVALS EVERY WEEK ●";
 
   return (
     <>

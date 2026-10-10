@@ -1064,7 +1064,7 @@ const DEFAULT_ORDER_TIMELINE = {
   ],
 };
 const DEFAULT_SHIPPING_CONFIG = {
-  freeShippingThreshold: 2000,
+  freeShippingThreshold: 4000,
   shippingCharge: 50,
 };
 

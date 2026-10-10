@@ -15,7 +15,7 @@ dotenv.config();
 const router = express.Router();
 const SHIPPING_CONFIG_KEY = 'shippingConfig';
 const DEFAULT_SHIPPING_CONFIG = {
-  freeShippingThreshold: 2000,
+  freeShippingThreshold: 4000,
   shippingCharge: 50,
 };
 
